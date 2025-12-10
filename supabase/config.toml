@@ -1,1 +1,4 @@
 project_id = "cbsadwjazebwhfrhbdew"
+
+[functions.analyze-sample]
+verify_jwt = true
