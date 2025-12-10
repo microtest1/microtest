@@ -1,14 +1,17 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, TrendingUp, CheckCircle2, Clock } from 'lucide-react';
+import { Activity, TrendingUp, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Test } from '@/types/database';
 
 const History: React.FC = () => {
+  const navigate = useNavigate();
+  
   const { data: tests = [], isLoading } = useQuery({
     queryKey: ['tests-history'],
     queryFn: async () => {
@@ -54,19 +57,38 @@ const History: React.FC = () => {
         ) : (
           <div className="space-y-4">
             {tests.map((test) => (
-              <Card key={test.id} className="glass-card hover:shadow-lg transition-shadow cursor-pointer">
+              <Card 
+                key={test.id} 
+                className="glass-card hover:shadow-elevated hover:scale-[1.01] transition-all cursor-pointer group"
+                onClick={() => navigate(`/results/${test.id}`)}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center">
-                      {test.test_type === 'malaria' ? <Activity className="h-6 w-6 text-primary" /> : <TrendingUp className="h-6 w-6 text-secondary" />}
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      {test.test_type === 'malaria' ? (
+                        <Activity className="h-6 w-6 text-primary" />
+                      ) : (
+                        <TrendingUp className="h-6 w-6 text-secondary" />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold capitalize">{test.test_type} Test</h3>
-                      <p className="text-sm text-muted-foreground">{format(new Date(test.created_at), 'MMM d, yyyy • h:mm a')}</p>
+                      <h3 className="font-semibold capitalize text-foreground">{test.test_type} Test</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(test.created_at), 'MMM d, yyyy • h:mm a')}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      {test.severity && <Badge className={getSeverityColor(test.severity)}>{test.severity}</Badge>}
-                      {test.status === 'completed' ? <CheckCircle2 className="h-5 w-5 text-success" /> : <Clock className="h-5 w-5 text-muted-foreground" />}
+                      {test.severity && (
+                        <Badge className={getSeverityColor(test.severity)}>
+                          {test.severity}
+                        </Badge>
+                      )}
+                      {test.status === 'completed' ? (
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      ) : (
+                        <Clock className="h-5 w-5 text-muted-foreground animate-pulse" />
+                      )}
+                      <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
                   </div>
                 </CardContent>
