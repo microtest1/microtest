@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Microscope, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Microscope, Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -70,58 +70,36 @@ const Auth: React.FC = () => {
       if (mode === 'signin') {
         const { error } = await signIn(email, password);
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            toast({
-              title: 'Login Failed',
-              description: 'Invalid email or password. Please try again.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Login Failed',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
+          toast({
+            title: 'Login Failed',
+            description: error.message.includes('Invalid login credentials') 
+              ? 'Invalid email or password. Please try again.'
+              : error.message,
+            variant: 'destructive',
+          });
         } else {
           navigate('/dashboard');
         }
       } else if (mode === 'signup') {
         const { error } = await signUp(email, password, fullName);
         if (error) {
-          if (error.message.includes('already registered')) {
-            toast({
-              title: 'Account Exists',
-              description: 'An account with this email already exists. Please sign in instead.',
-              variant: 'destructive',
-            });
-          } else {
-            toast({
-              title: 'Sign Up Failed',
-              description: error.message,
-              variant: 'destructive',
-            });
-          }
-        } else {
           toast({
-            title: 'Welcome to MicroTest!',
-            description: 'Your account has been created successfully.',
+            title: error.message.includes('already registered') ? 'Account Exists' : 'Sign Up Failed',
+            description: error.message.includes('already registered') 
+              ? 'An account with this email already exists. Please sign in instead.'
+              : error.message,
+            variant: 'destructive',
           });
+        } else {
+          toast({ title: 'Welcome to MicroTest!', description: 'Your account has been created successfully.' });
           navigate('/dashboard');
         }
       } else if (mode === 'forgot-password') {
         const { error } = await resetPassword(email);
         if (error) {
-          toast({
-            title: 'Error',
-            description: error.message,
-            variant: 'destructive',
-          });
+          toast({ title: 'Error', description: error.message, variant: 'destructive' });
         } else {
-          toast({
-            title: 'Password Reset Email Sent',
-            description: 'Check your inbox for instructions to reset your password.',
-          });
+          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox for instructions to reset your password.' });
           setMode('signin');
         }
       }
@@ -132,175 +110,241 @@ const Auth: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-background to-secondary-50">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <Microscope className="h-12 w-12 text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex items-center justify-center gradient-mesh">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center glow-primary animate-pulse">
+              <Microscope className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <div className="absolute -inset-4 rounded-3xl bg-primary/20 animate-ping" />
+          </div>
+          <p className="text-muted-foreground font-medium">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-background to-secondary-50 p-4">
-      <div className="w-full max-w-md">
-        {/* Logo and Branding */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary text-primary-foreground mb-4 shadow-lg">
-            <Microscope className="h-8 w-8" />
+    <div className="min-h-screen flex gradient-mesh relative overflow-hidden">
+      {/* Animated Background Orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="orb orb-primary w-96 h-96 -top-48 -left-48 animate-blob" />
+        <div className="orb orb-secondary w-80 h-80 top-1/4 -right-40 animate-blob stagger-2" />
+        <div className="orb orb-accent w-72 h-72 bottom-20 left-1/4 animate-blob stagger-4" />
+      </div>
+
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative p-12 flex-col justify-between">
+        <div className="relative z-10">
+          <div className="flex items-center gap-4 mb-16">
+            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center glow-primary">
+              <Microscope className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold font-display">MicroTest</h1>
+              <p className="text-sm text-muted-foreground">AI Health Diagnostics</p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">MicroTest</h1>
-          <p className="text-muted-foreground mt-2">AI-Powered Health Diagnostics</p>
+
+          <div className="max-w-lg space-y-8">
+            <div className="space-y-4">
+              <h2 className="text-5xl xl:text-6xl font-bold font-display leading-tight">
+                <span className="text-gradient">Next-Gen</span>
+                <br />
+                Medical Diagnostics
+              </h2>
+              <p className="text-xl text-muted-foreground leading-relaxed">
+                Harness the power of AI to detect malaria and pregnancy with laboratory-grade accuracy from your smartphone.
+              </p>
+            </div>
+
+            {/* Feature Cards */}
+            <div className="grid gap-4 pt-8">
+              {[
+                { icon: Sparkles, title: 'AI-Powered Analysis', desc: 'Advanced ML models trained on millions of samples', color: 'primary' },
+                { icon: Shield, title: 'WHO Compliant', desc: 'Following international health standards', color: 'secondary' },
+                { icon: Zap, title: 'Instant Results', desc: 'Get accurate diagnostics in seconds', color: 'accent' },
+              ].map((feature, i) => (
+                <div 
+                  key={feature.title}
+                  className={`glass-card rounded-2xl p-5 hover-lift opacity-0 animate-fade-in-up stagger-${i + 1}`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`icon-container${feature.color !== 'primary' ? `-${feature.color}` : ''} w-12 h-12`}>
+                      <feature.icon className={`h-6 w-6 text-${feature.color}`} />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold font-display">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <Card className="glass-card">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-semibold text-center">
-              {mode === 'signin' && 'Welcome back'}
-              {mode === 'signup' && 'Create an account'}
-              {mode === 'forgot-password' && 'Reset password'}
-            </CardTitle>
-            <CardDescription className="text-center">
-              {mode === 'signin' && 'Sign in to access your health dashboard'}
-              {mode === 'signup' && 'Enter your details to get started'}
-              {mode === 'forgot-password' && "We'll send you a reset link"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'signup' && (
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="fullName"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="pl-10"
-                    />
+        {/* Footer */}
+        <p className="text-sm text-muted-foreground relative z-10">
+          © 2024 MicroTest. Advancing healthcare through technology.
+        </p>
+      </div>
+
+      {/* Right Side - Auth Form */}
+      <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center p-6 lg:p-12">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-8 opacity-0 animate-fade-in">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary glow-primary mb-4">
+              <Microscope className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-bold font-display">MicroTest</h1>
+            <p className="text-muted-foreground">AI-Powered Health Diagnostics</p>
+          </div>
+
+          <Card className="glass-card border-0 shadow-elevated opacity-0 animate-fade-in-up">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl font-bold font-display text-center">
+                {mode === 'signin' && 'Welcome back'}
+                {mode === 'signup' && 'Create account'}
+                {mode === 'forgot-password' && 'Reset password'}
+              </CardTitle>
+              <CardDescription className="text-center">
+                {mode === 'signin' && 'Sign in to access your health dashboard'}
+                {mode === 'signup' && 'Start your journey to better health insights'}
+                {mode === 'forgot-password' && "We'll send you a reset link"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {mode === 'signup' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                      <Input
+                        id="fullName"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
+                      />
+                    </div>
+                    {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
                   </div>
-                  {errors.fullName && (
-                    <p className="text-sm text-destructive">{errors.fullName}</p>
-                  )}
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email}</p>
                 )}
-              </div>
-              
-              {mode !== 'forgot-password' && (
+                
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
                     <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
                     />
                   </div>
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
+                  {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
                 </div>
-              )}
+                
+                {mode !== 'forgot-password' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
+                      />
+                    </div>
+                    {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+                  </div>
+                )}
+                
+                <Button
+                  type="submit"
+                  className="w-full h-12 rounded-xl text-base font-semibold btn-premium"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
+                      {mode === 'signin' && 'Signing in...'}
+                      {mode === 'signup' && 'Creating account...'}
+                      {mode === 'forgot-password' && 'Sending...'}
+                    </span>
+                  ) : (
+                    <>
+                      {mode === 'signin' && 'Sign In'}
+                      {mode === 'signup' && 'Create Account'}
+                      {mode === 'forgot-password' && 'Send Reset Link'}
+                    </>
+                  )}
+                </Button>
+              </form>
               
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
-                    {mode === 'signin' && 'Signing in...'}
-                    {mode === 'signup' && 'Creating account...'}
-                    {mode === 'forgot-password' && 'Sending...'}
-                  </span>
-                ) : (
+              <div className="mt-8 text-center space-y-3">
+                {mode === 'signin' && (
                   <>
-                    {mode === 'signin' && 'Sign In'}
-                    {mode === 'signup' && 'Create Account'}
-                    {mode === 'forgot-password' && 'Send Reset Link'}
-                  </>
-                )}
-              </Button>
-            </form>
-            
-            <div className="mt-6 text-center space-y-2">
-              {mode === 'signin' && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot-password')}
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot your password?
-                  </button>
-                  <p className="text-sm text-muted-foreground">
-                    Don't have an account?{' '}
                     <button
                       type="button"
-                      onClick={() => setMode('signup')}
-                      className="text-primary font-medium hover:underline"
+                      onClick={() => setMode('forgot-password')}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors animated-underline"
                     >
-                      Sign up
+                      Forgot your password?
+                    </button>
+                    <p className="text-sm text-muted-foreground">
+                      Don't have an account?{' '}
+                      <button
+                        type="button"
+                        onClick={() => setMode('signup')}
+                        className="text-primary font-semibold hover:text-primary/80 transition-colors"
+                      >
+                        Sign up
+                      </button>
+                    </p>
+                  </>
+                )}
+                
+                {mode === 'signup' && (
+                  <p className="text-sm text-muted-foreground">
+                    Already have an account?{' '}
+                    <button
+                      type="button"
+                      onClick={() => setMode('signin')}
+                      className="text-primary font-semibold hover:text-primary/80 transition-colors"
+                    >
+                      Sign in
                     </button>
                   </p>
-                </>
-              )}
-              
-              {mode === 'signup' && (
-                <p className="text-sm text-muted-foreground">
-                  Already have an account?{' '}
+                )}
+                
+                {mode === 'forgot-password' && (
                   <button
                     type="button"
                     onClick={() => setMode('signin')}
-                    className="text-primary font-medium hover:underline"
+                    className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
                   >
-                    Sign in
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to sign in
                   </button>
-                </p>
-              )}
-              
-              {mode === 'forgot-password' && (
-                <button
-                  type="button"
-                  onClick={() => setMode('signin')}
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to sign in
-                </button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy
-        </p>
+          <p className="text-center text-xs text-muted-foreground mt-6 opacity-0 animate-fade-in stagger-3">
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </p>
+        </div>
       </div>
     </div>
   );
