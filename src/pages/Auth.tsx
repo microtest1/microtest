@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { z } from 'zod';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Microscope, Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap } from 'lucide-react';
+import { Microscope, Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap, ArrowRight, Activity, CheckCircle2 } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -17,10 +17,14 @@ type AuthMode = 'signin' | 'signup' | 'forgot-password';
 
 const Auth: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp, resetPassword, user, loading } = useAuth();
   const { toast } = useToast();
   
-  const [mode, setMode] = useState<AuthMode>('signin');
+  const [mode, setMode] = useState<AuthMode>(() => {
+    const urlMode = searchParams.get('mode');
+    return urlMode === 'signup' ? 'signup' : 'signin';
+  });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -136,15 +140,15 @@ const Auth: React.FC = () => {
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative p-12 flex-col justify-between">
         <div className="relative z-10">
-          <div className="flex items-center gap-4 mb-16">
-            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center glow-primary">
+          <Link to="/" className="flex items-center gap-4 mb-16 group">
+            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center glow-primary group-hover:scale-105 transition-transform">
               <Microscope className="h-7 w-7 text-primary-foreground" />
             </div>
             <div>
               <h1 className="text-2xl font-bold font-display">MicroTest</h1>
               <p className="text-sm text-muted-foreground">AI Health Diagnostics</p>
             </div>
-          </div>
+          </Link>
 
           <div className="max-w-lg space-y-8">
             <div className="space-y-4">
@@ -181,6 +185,18 @@ const Auth: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Trust Indicators */}
+            <div className="flex items-center gap-6 pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                <span>HIPAA Compliant</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Activity className="h-4 w-4 text-primary" />
+                <span>99.2% Accuracy</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -194,26 +210,33 @@ const Auth: React.FC = () => {
       <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8 opacity-0 animate-fade-in">
+          <Link to="/" className="lg:hidden text-center mb-8 opacity-0 animate-fade-in block">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary glow-primary mb-4">
               <Microscope className="h-8 w-8 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold font-display">MicroTest</h1>
             <p className="text-muted-foreground">AI-Powered Health Diagnostics</p>
-          </div>
+          </Link>
 
           <Card className="glass-card border-0 shadow-elevated opacity-0 animate-fade-in-up">
             <CardHeader className="space-y-1 pb-6">
               <CardTitle className="text-2xl font-bold font-display text-center">
                 {mode === 'signin' && 'Welcome back'}
-                {mode === 'signup' && 'Create account'}
+                {mode === 'signup' && 'Create your account'}
                 {mode === 'forgot-password' && 'Reset password'}
               </CardTitle>
               <CardDescription className="text-center">
                 {mode === 'signin' && 'Sign in to access your health dashboard'}
-                {mode === 'signup' && 'Start your journey to better health insights'}
+                {mode === 'signup' && 'Start your 14-day free trial today'}
                 {mode === 'forgot-password' && "We'll send you a reset link"}
               </CardDescription>
+              
+              {mode === 'signup' && (
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-success/10 border border-success/20 rounded-lg px-4 py-2 mt-3">
+                  <Sparkles className="h-4 w-4 text-success" />
+                  <span>No credit card required</span>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -271,7 +294,7 @@ const Auth: React.FC = () => {
                 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-xl text-base font-semibold btn-premium"
+                  className="w-full h-12 rounded-xl text-base font-semibold btn-premium shadow-lg shadow-primary/25"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -282,11 +305,22 @@ const Auth: React.FC = () => {
                       {mode === 'forgot-password' && 'Sending...'}
                     </span>
                   ) : (
-                    <>
-                      {mode === 'signin' && 'Sign In'}
-                      {mode === 'signup' && 'Create Account'}
+                    <span className="flex items-center gap-2">
+                      {mode === 'signin' && (
+                        <>
+                          Sign In
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
+                      {mode === 'signup' && (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Start Free Trial
+                          <ArrowRight className="h-4 w-4" />
+                        </>
+                      )}
                       {mode === 'forgot-password' && 'Send Reset Link'}
-                    </>
+                    </span>
                   )}
                 </Button>
               </form>
