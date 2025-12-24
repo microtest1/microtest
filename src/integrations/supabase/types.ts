@@ -199,7 +199,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      datasets_public: {
+        Row: {
+          classification: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          name: string | null
+          test_type: Database["public"]["Enums"]["test_type"] | null
+        }
+        Insert: {
+          classification?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          test_type?: Database["public"]["Enums"]["test_type"] | null
+        }
+        Update: {
+          classification?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          name?: string | null
+          test_type?: Database["public"]["Enums"]["test_type"] | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_verification_code: { Args: never; Returns: string }
