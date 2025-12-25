@@ -142,9 +142,11 @@ const Dashboard = () => {
                     <p className="text-sm font-medium text-muted-foreground mb-1">
                       {stat.label}
                     </p>
-                    <p className="text-3xl font-bold text-foreground">
-                      {isLoading ? <Skeleton className="h-8 w-12" /> : stat.value}
-                    </p>
+                    {isLoading ? (
+                      <Skeleton className="h-8 w-12" />
+                    ) : (
+                      <p className="text-3xl font-bold text-foreground">{stat.value}</p>
+                    )}
                   </div>
                   <div className={`rounded-xl ${stat.bgColor} p-4`}>
                     <stat.icon className={`h-6 w-6 text-${stat.color}`} />

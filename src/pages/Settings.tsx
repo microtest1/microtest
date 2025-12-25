@@ -52,14 +52,14 @@ const Settings = () => {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-premium bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-gradient">
             Settings
           </h1>
-          <p className="text-gray-500 mt-1">Manage your account preferences</p>
+          <p className="text-muted-foreground mt-1">Manage your account preferences</p>
         </div>
 
         <div className="grid gap-6">
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-primary-100">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Bell className="h-5 w-5 text-primary" />
@@ -86,7 +86,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-primary-100">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5 text-primary" />
@@ -118,7 +118,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-primary-100">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-primary" />
@@ -145,7 +145,7 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-xl bg-white/80 dark:bg-gray-800/80 border border-primary-100">
+          <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" />
@@ -153,13 +153,12 @@ const Settings = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Current Plan: <span className="font-semibold">Free Tier</span>
+              <div className="text-sm text-muted-foreground">
+                Current Plan: <span className="font-semibold text-foreground">Free Tier</span>
               </div>
               <Button 
-                variant="outline" 
                 onClick={handleUpgradePlan}
-                className="w-full bg-gradient-premium text-white hover:opacity-90 transition-opacity"
+                className="w-full btn-premium"
               >
                 Upgrade Plan
               </Button>
@@ -170,7 +169,7 @@ const Settings = () => {
         <div className="flex justify-end">
           <Button 
             onClick={handleSave}
-            className="bg-gradient-premium text-white hover:opacity-90 transition-opacity"
+            className="btn-premium"
           >
             Save Changes
           </Button>

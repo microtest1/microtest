@@ -5,23 +5,27 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, TrendingUp, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Activity, TrendingUp, CheckCircle2, Clock, ChevronRight, Microscope, Baby } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Test } from '@/types/database';
 
 const History: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const { data: tests = [], isLoading } = useQuery({
-    queryKey: ['tests-history'],
+    queryKey: ['tests-history', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tests')
         .select('*')
+        .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Test[];
     },
+    enabled: !!user?.id,
   });
 
   const getSeverityColor = (severity: string | null) => {
@@ -64,11 +68,11 @@ const History: React.FC = () => {
               >
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <div className={`w-12 h-12 rounded-xl ${test.test_type === 'malaria' ? 'bg-primary/10' : 'bg-secondary/10'} flex items-center justify-center group-hover:scale-105 transition-transform`}>
                       {test.test_type === 'malaria' ? (
-                        <Activity className="h-6 w-6 text-primary" />
+                        <Microscope className="h-6 w-6 text-primary" />
                       ) : (
-                        <TrendingUp className="h-6 w-6 text-secondary" />
+                        <Baby className="h-6 w-6 text-secondary" />
                       )}
                     </div>
                     <div className="flex-1">
