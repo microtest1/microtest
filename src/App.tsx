@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -12,6 +12,7 @@ import Scanner from "./pages/Scanner";
 import History from "./pages/History";
 import Results from "./pages/Results";
 import Settings from "./pages/Settings";
+import Subscription from "./pages/Subscription";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
