@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Scanner from "./pages/Scanner";
+import NewTest from "./pages/NewTest";
 import History from "./pages/History";
 import Results from "./pages/Results";
 import Settings from "./pages/Settings";
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
+            <Route path="/new-test" element={<ProtectedRoute><NewTest /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

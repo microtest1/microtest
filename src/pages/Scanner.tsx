@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,17 +7,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { MicroscopeControls } from '@/components/MicroscopeControls';
+import { GridOverlay } from '@/components/GridOverlay';
+import { useImageEnhancement } from '@/hooks/useImageEnhancement';
 import { 
   Camera, 
   Upload, 
   X, 
-  Loader2, 
-  ZoomIn, 
-  ZoomOut, 
-  Sun, 
-  Image as ImageIcon,
+  Loader2,
   Microscope,
-  AlertCircle
+  AlertCircle,
+  Sparkles,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import type { TestType } from '@/types/database';
 
@@ -27,6 +29,7 @@ const Scanner: React.FC = () => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { captureEnhancedImage } = useImageEnhancement();
   
   const [testType, setTestType] = useState<TestType | ''>('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -34,8 +37,36 @@ const Scanner: React.FC = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  
+  // Advanced microscope controls
   const [zoom, setZoom] = useState(1);
   const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [showGrid, setShowGrid] = useState(false);
+  const [showEdgeDetection, setShowEdgeDetection] = useState(false);
+  const [isAutoFocusing, setIsAutoFocusing] = useState(false);
+  const [cameraCapabilities, setCameraCapabilities] = useState<{
+    hasTorch: boolean;
+    hasFocus: boolean;
+    hasZoom: boolean;
+  }>({ hasTorch: false, hasFocus: false, hasZoom: false });
+
+  // Check camera capabilities
+  const checkCameraCapabilities = useCallback(async (mediaStream: MediaStream) => {
+    const track = mediaStream.getVideoTracks()[0];
+    if (track) {
+      const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & {
+        torch?: boolean;
+        focusMode?: string[];
+        zoom?: { min: number; max: number };
+      };
+      setCameraCapabilities({
+        hasTorch: Boolean(capabilities?.torch),
+        hasFocus: Boolean(capabilities?.focusMode?.includes('continuous')),
+        hasZoom: Boolean(capabilities?.zoom),
+      });
+    }
+  }, []);
 
   const startCamera = async () => {
     try {
@@ -43,7 +74,8 @@ const Scanner: React.FC = () => {
         video: { 
           facingMode: 'environment',
           width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' }] as any,
         }
       });
       
@@ -51,8 +83,10 @@ const Scanner: React.FC = () => {
         videoRef.current.srcObject = mediaStream;
         setStream(mediaStream);
         setIsCameraActive(true);
+        await checkCameraCapabilities(mediaStream);
       }
     } catch (error) {
+      console.error('Camera error:', error);
       toast({
         title: 'Camera Error',
         description: 'Unable to access camera. Please check permissions.',
@@ -61,35 +95,71 @@ const Scanner: React.FC = () => {
     }
   };
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
     }
     setIsCameraActive(false);
+  }, [stream]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
+
+  const handleAutoFocus = async () => {
+    if (!stream) return;
+    
+    setIsAutoFocusing(true);
+    const track = stream.getVideoTracks()[0];
+    
+    try {
+      // Try to trigger auto-focus
+      await track.applyConstraints({
+        advanced: [{ focusMode: 'auto' }] as any,
+      });
+      
+      // Brief delay then switch back to continuous
+      setTimeout(async () => {
+        try {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }] as any,
+          });
+        } catch {
+          // Ignore if not supported
+        }
+        setIsAutoFocusing(false);
+      }, 1500);
+    } catch {
+      setIsAutoFocusing(false);
+    }
   };
 
-  const captureFromCamera = () => {
+  const resetControls = () => {
+    setZoom(1);
+    setBrightness(100);
+    setContrast(100);
+    setShowGrid(false);
+    setShowEdgeDetection(false);
+  };
+
+  const captureFromCamera = async () => {
     if (!videoRef.current) return;
     
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
+    const result = await captureEnhancedImage(videoRef.current, {
+      brightness,
+      contrast,
+      applyEdgeDetection: showEdgeDetection,
+    });
     
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.filter = `brightness(${brightness}%)`;
-      ctx.drawImage(videoRef.current, 0, 0);
-      
-      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.9);
-      setCapturedImage(imageDataUrl);
-      
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], 'capture.jpg', { type: 'image/jpeg' });
-          setImageFile(file);
-        }
-      }, 'image/jpeg', 0.9);
+    if (result) {
+      setCapturedImage(result.dataUrl);
+      setImageFile(result.file);
     }
     
     stopCamera();
@@ -103,6 +173,16 @@ const Scanner: React.FC = () => {
       toast({
         title: 'Invalid File',
         description: 'Please select an image file.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Please select an image under 10MB.',
         variant: 'destructive',
       });
       return;
@@ -125,12 +205,31 @@ const Scanner: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!testType || !capturedImage || !user) {
+    if (!testType) {
       toast({
-        title: 'Missing Information',
-        description: 'Please select a test type and capture an image.',
+        title: 'Test Type Required',
+        description: 'Please select a test type before analyzing.',
         variant: 'destructive',
       });
+      return;
+    }
+
+    if (!capturedImage) {
+      toast({
+        title: 'Image Required',
+        description: 'Please capture or upload an image.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to analyze samples.',
+        variant: 'destructive',
+      });
+      navigate('/auth');
       return;
     }
 
@@ -148,7 +247,10 @@ const Scanner: React.FC = () => {
         .select()
         .single();
 
-      if (testError) throw testError;
+      if (testError) {
+        console.error('Test creation error:', testError);
+        throw new Error('Failed to create test record');
+      }
 
       // Call AI analysis edge function
       const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-sample', {
@@ -160,13 +262,14 @@ const Scanner: React.FC = () => {
       });
 
       if (analysisError) {
+        console.error('Analysis error:', analysisError);
         // Update test status to failed
         await supabase
           .from('tests')
           .update({ status: 'failed' })
           .eq('id', test.id);
         
-        throw analysisError;
+        throw new Error(analysisError.message || 'Analysis failed');
       }
 
       toast({
@@ -179,7 +282,7 @@ const Scanner: React.FC = () => {
       console.error('Analysis error:', error);
       toast({
         title: 'Analysis Failed',
-        description: 'Unable to analyze the sample. Please try again.',
+        description: error instanceof Error ? error.message : 'Unable to analyze the sample. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -190,18 +293,35 @@ const Scanner: React.FC = () => {
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">AI Microscopy Scanner</h1>
-          <p className="text-muted-foreground mt-1">
-            Capture or upload a sample image for AI-powered analysis
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <Microscope className="h-8 w-8 text-primary" />
+              AI Microscopy Scanner
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Advanced sample analysis with real-time image enhancement
+            </p>
+          </div>
+          {isCameraActive && (
+            <div className="flex items-center gap-2 text-sm">
+              {cameraCapabilities.hasFocus ? (
+                <Wifi className="h-4 w-4 text-success" />
+              ) : (
+                <WifiOff className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="text-muted-foreground">
+                {cameraCapabilities.hasFocus ? 'Auto-focus active' : 'Basic mode'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Test Type Selection */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Microscope className="h-5 w-5 text-primary" />
+              <Sparkles className="h-5 w-5 text-primary" />
               Select Test Type
             </CardTitle>
             <CardDescription>
@@ -216,14 +336,14 @@ const Scanner: React.FC = () => {
               <SelectContent>
                 <SelectItem value="malaria">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    Malaria Test (Blood Smear)
+                    <div className="w-2 h-2 rounded-full bg-destructive" />
+                    Malaria Test (Blood Smear Analysis)
                   </div>
                 </SelectItem>
                 <SelectItem value="pregnancy">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-secondary" />
-                    Pregnancy Test (Urine Sample)
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    Pregnancy Test (HCG Detection)
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -239,64 +359,46 @@ const Scanner: React.FC = () => {
               Sample Image
             </CardTitle>
             <CardDescription>
-              Capture with camera or upload an existing image
+              Use the advanced microscopy camera or upload an existing image
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Camera View */}
             {isCameraActive && (
-              <div className="relative rounded-xl overflow-hidden bg-black">
+              <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
                 <video
                   ref={videoRef}
                   autoPlay
                   playsInline
-                  className="w-full aspect-video object-cover"
+                  muted
+                  className="w-full h-full object-cover transition-transform duration-200"
                   style={{
                     transform: `scale(${zoom})`,
-                    filter: `brightness(${brightness}%)`,
+                    filter: `brightness(${brightness}%) contrast(${contrast}%)${showEdgeDetection ? ' saturate(1.2)' : ''}`,
                   }}
                 />
                 
-                {/* Camera Controls */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-background/80 backdrop-blur-sm rounded-full px-6 py-3">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setZoom(Math.max(1, zoom - 0.25))}
-                    className="text-foreground"
-                  >
-                    <ZoomOut className="h-5 w-5" />
-                  </Button>
-                  <span className="text-sm font-medium">{zoom.toFixed(1)}x</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setZoom(Math.min(3, zoom + 0.25))}
-                    className="text-foreground"
-                  >
-                    <ZoomIn className="h-5 w-5" />
-                  </Button>
-                  <div className="w-px h-6 bg-border" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setBrightness(Math.max(50, brightness - 10))}
-                    className="text-foreground"
-                  >
-                    <Sun className="h-5 w-5 opacity-50" />
-                  </Button>
-                  <span className="text-sm font-medium">{brightness}%</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setBrightness(Math.min(150, brightness + 10))}
-                    className="text-foreground"
-                  >
-                    <Sun className="h-5 w-5" />
-                  </Button>
-                </div>
-
-                {/* Capture/Cancel Buttons */}
+                {/* Grid Overlay */}
+                <GridOverlay visible={showGrid} />
+                
+                {/* Edge Detection Indicator */}
+                {showEdgeDetection && (
+                  <div className="absolute top-4 left-4 px-3 py-1.5 bg-success/80 backdrop-blur-sm rounded-full text-xs font-medium text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    Edge Detection Active
+                  </div>
+                )}
+                
+                {/* Auto-focusing indicator */}
+                {isAutoFocusing && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-24 h-24 border-4 border-primary rounded-lg animate-pulse flex items-center justify-center">
+                      <span className="text-primary text-sm font-medium">Focusing...</span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Capture Button */}
                 <div className="absolute top-4 right-4 flex gap-2">
                   <Button variant="secondary" size="sm" onClick={stopCamera}>
                     <X className="h-4 w-4 mr-1" />
@@ -304,26 +406,47 @@ const Scanner: React.FC = () => {
                   </Button>
                 </div>
 
-                <div className="absolute bottom-20 left-1/2 -translate-x-1/2">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                   <Button
                     size="lg"
-                    className="rounded-full w-16 h-16 shadow-xl"
+                    className="rounded-full w-20 h-20 shadow-2xl bg-primary hover:bg-primary/90 border-4 border-white"
                     onClick={captureFromCamera}
+                    disabled={isAutoFocusing}
                   >
-                    <Camera className="h-6 w-6" />
+                    <Camera className="h-8 w-8" />
                   </Button>
                 </div>
+
+                {/* Advanced Controls */}
+                <MicroscopeControls
+                  zoom={zoom}
+                  setZoom={setZoom}
+                  brightness={brightness}
+                  setBrightness={setBrightness}
+                  contrast={contrast}
+                  setContrast={setContrast}
+                  showGrid={showGrid}
+                  setShowGrid={setShowGrid}
+                  showEdgeDetection={showEdgeDetection}
+                  setShowEdgeDetection={setShowEdgeDetection}
+                  onAutoFocus={handleAutoFocus}
+                  onReset={resetControls}
+                  isAutoFocusing={isAutoFocusing}
+                />
               </div>
             )}
 
             {/* Captured Image Preview */}
             {capturedImage && !isCameraActive && (
-              <div className="relative rounded-xl overflow-hidden">
+              <div className="relative rounded-xl overflow-hidden border border-border">
                 <img 
                   src={capturedImage} 
                   alt="Captured sample" 
                   className="w-full aspect-video object-contain bg-muted"
                 />
+                <div className="absolute top-4 left-4 px-3 py-1.5 bg-success/80 backdrop-blur-sm rounded-full text-xs font-medium text-white">
+                  Image Ready for Analysis
+                </div>
                 <Button
                   variant="destructive"
                   size="icon"
@@ -341,23 +464,23 @@ const Scanner: React.FC = () => {
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-primary/30 bg-primary-50 hover:bg-primary-100 hover:border-primary/50 transition-all"
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all group"
                 >
-                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center">
-                    <Camera className="h-7 w-7 text-primary-foreground" />
+                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Microscope className="h-7 w-7 text-primary-foreground" />
                   </div>
                   <div className="text-center">
-                    <p className="font-medium text-foreground">Use Camera</p>
-                    <p className="text-sm text-muted-foreground">Capture live sample</p>
+                    <p className="font-medium text-foreground">Use Microscopy Camera</p>
+                    <p className="text-sm text-muted-foreground">Advanced controls & enhancement</p>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-secondary/30 bg-secondary-50 hover:bg-secondary-100 hover:border-secondary/50 transition-all"
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-secondary/30 bg-secondary/5 hover:bg-secondary/10 hover:border-secondary/50 transition-all group"
                 >
-                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Upload className="h-7 w-7 text-secondary-foreground" />
                   </div>
                   <div className="text-center">
@@ -382,10 +505,10 @@ const Scanner: React.FC = () => {
               <div className="text-sm">
                 <p className="font-medium text-foreground">Tips for best results:</p>
                 <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-1">
-                  <li>Ensure good lighting on the sample</li>
-                  <li>Keep the camera steady while capturing</li>
-                  <li>Focus on the center of the sample</li>
-                  <li>Avoid shadows or reflections</li>
+                  <li>Use the grid overlay to center your sample</li>
+                  <li>Enable edge detection for better cell boundary visibility</li>
+                  <li>Adjust brightness and contrast for optimal clarity</li>
+                  <li>Use auto-focus before capturing for sharp images</li>
                 </ul>
               </div>
             </div>
@@ -402,11 +525,11 @@ const Scanner: React.FC = () => {
           {isAnalyzing ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Analyzing Sample...
+              Analyzing Sample with AI...
             </>
           ) : (
             <>
-              <Microscope className="h-5 w-5 mr-2" />
+              <Sparkles className="h-5 w-5 mr-2" />
               Analyze Sample
             </>
           )}
