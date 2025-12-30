@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ComparisonView } from '@/components/ComparisonView';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
@@ -451,6 +452,14 @@ const Results: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Comparison View */}
+        <ComparisonView
+          testType={test.test_type}
+          testImageUrl={test.sample_image_url}
+          testSeverity={test.severity}
+          testFindings={test.ai_findings}
+        />
 
         {/* Medical Disclaimer */}
         <div className="flex items-start gap-4 p-5 rounded-xl bg-warning/10 border border-warning/30">
