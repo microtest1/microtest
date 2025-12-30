@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { ImageAnnotator } from '@/components/ImageAnnotator';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  PenTool,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +59,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [annotatingImage, setAnnotatingImage] = useState<'test' | 'reference' | null>(null);
 
   const { data: datasets, isLoading } = useQuery({
     queryKey: ['comparison-datasets', testType],
@@ -118,31 +121,32 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   }, [datasets, selectedDataset, testSeverity]);
 
   return (
-    <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
-      <Card className="glass-card overflow-hidden">
-        <CardHeader className="border-b border-border/50 bg-muted/30">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <ArrowLeftRight className="h-5 w-5 text-primary" />
+    <>
+      <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+        <Card className="glass-card overflow-hidden">
+          <CardHeader className="border-b border-border/50 bg-muted/30">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <ArrowLeftRight className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <span>Compare with Reference</span>
+                  <p className="text-sm font-normal text-muted-foreground">
+                    Side-by-side comparison with {testType} reference samples
+                  </p>
+                </div>
               </div>
-              <div>
-                <span>Compare with Reference</span>
-                <p className="text-sm font-normal text-muted-foreground">
-                  Side-by-side comparison with {testType} reference samples
-                </p>
-              </div>
-            </div>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Maximize2 className="h-4 w-4 mr-2" />
-                Fullscreen
-              </Button>
-            </DialogTrigger>
-          </CardTitle>
-        </CardHeader>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Maximize2 className="h-4 w-4 mr-2" />
+                  Fullscreen
+                </Button>
+              </DialogTrigger>
+            </CardTitle>
+          </CardHeader>
 
-        <CardContent className="p-0">
+          <CardContent className="p-0">
           <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/50">
             {/* Your Test Result */}
             <div className="p-4 space-y-4">
@@ -161,14 +165,26 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
                 )}
               </div>
 
-              <div className="relative aspect-video rounded-xl overflow-hidden bg-muted border border-border/50">
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-muted border border-border/50 group">
                 {testImageUrl ? (
-                  <img
-                    src={testImageUrl}
-                    alt="Your test result"
-                    className="w-full h-full object-contain transition-transform duration-300"
-                    style={{ transform: `scale(${zoom})` }}
-                  />
+                  <>
+                    <img
+                      src={testImageUrl}
+                      alt="Your test result"
+                      className="w-full h-full object-contain transition-transform duration-300"
+                      style={{ transform: `scale(${zoom})` }}
+                    />
+                    {/* Annotate Button */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      onClick={() => setAnnotatingImage('test')}
+                    >
+                      <PenTool className="h-4 w-4 mr-1" />
+                      Annotate
+                    </Button>
+                  </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
                     {testType === 'malaria' ? (
@@ -238,6 +254,16 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     </div>
+                    {/* Annotate Button */}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                      onClick={() => setAnnotatingImage('reference')}
+                    >
+                      <PenTool className="h-4 w-4 mr-1" />
+                      Annotate
+                    </Button>
                   </>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
@@ -471,5 +497,26 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    {/* Annotation Dialog */}
+    <Dialog open={!!annotatingImage} onOpenChange={() => setAnnotatingImage(null)}>
+      <DialogContent className="max-w-4xl h-[85vh] p-0 overflow-hidden">
+        {annotatingImage === 'test' && testImageUrl && (
+          <ImageAnnotator
+            imageUrl={testImageUrl}
+            title="Annotate Your Test Result"
+            onClose={() => setAnnotatingImage(null)}
+          />
+        )}
+        {annotatingImage === 'reference' && selectedDataset?.image_url && (
+          <ImageAnnotator
+            imageUrl={selectedDataset.image_url}
+            title={`Annotate: ${selectedDataset.name}`}
+            onClose={() => setAnnotatingImage(null)}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   );
 };
