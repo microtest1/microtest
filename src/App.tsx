@@ -14,6 +14,7 @@ import History from "./pages/History";
 import Results from "./pages/Results";
 import Settings from "./pages/Settings";
 import Subscription from "./pages/Subscription";
+import Datasets from "./pages/Datasets";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/scanner" element={<ProtectedRoute><Scanner /></ProtectedRoute>} />
             <Route path="/new-test" element={<ProtectedRoute><NewTest /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+            <Route path="/datasets" element={<ProtectedRoute><Datasets /></ProtectedRoute>} />
             <Route path="/results/:testId" element={<ProtectedRoute><Results /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><Subscription /></ProtectedRoute>} />

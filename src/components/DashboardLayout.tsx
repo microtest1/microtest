@@ -26,6 +26,7 @@ const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/scanner', icon: Camera, label: 'New Test' },
   { path: '/history', icon: History, label: 'Test History' },
+  { path: '/datasets', icon: FileText, label: 'Reference Datasets' },
   { path: '/subscription', icon: CreditCard, label: 'Subscription' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ];
