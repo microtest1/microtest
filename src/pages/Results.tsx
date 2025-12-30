@@ -455,6 +455,7 @@ const Results: React.FC = () => {
 
         {/* Comparison View */}
         <ComparisonView
+          testId={test.id}
           testType={test.test_type}
           testImageUrl={test.sample_image_url}
           testSeverity={test.severity}
