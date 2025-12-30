@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      annotations: {
+        Row: {
+          annotated_image_url: string | null
+          annotation_data: Json
+          created_at: string
+          id: string
+          image_type: string
+          reference_dataset_id: string | null
+          test_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annotated_image_url?: string | null
+          annotation_data?: Json
+          created_at?: string
+          id?: string
+          image_type: string
+          reference_dataset_id?: string | null
+          test_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annotated_image_url?: string | null
+          annotation_data?: Json
+          created_at?: string
+          id?: string
+          image_type?: string
+          reference_dataset_id?: string | null
+          test_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annotations_reference_dataset_id_fkey"
+            columns: ["reference_dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annotations_reference_dataset_id_fkey"
+            columns: ["reference_dataset_id"]
+            isOneToOne: false
+            referencedRelation: "datasets_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annotations_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       datasets: {
         Row: {
           classification: string | null

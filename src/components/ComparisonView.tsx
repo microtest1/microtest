@@ -44,6 +44,7 @@ interface Dataset {
 }
 
 interface ComparisonViewProps {
+  testId: string;
   testType: 'malaria' | 'pregnancy';
   testImageUrl?: string | null;
   testSeverity?: string | null;
@@ -51,6 +52,7 @@ interface ComparisonViewProps {
 }
 
 export const ComparisonView: React.FC<ComparisonViewProps> = ({
+  testId,
   testType,
   testImageUrl,
   testSeverity,
@@ -60,6 +62,36 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
   const [zoom, setZoom] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [annotatingImage, setAnnotatingImage] = useState<'test' | 'reference' | null>(null);
+  const [testAnnotationData, setTestAnnotationData] = useState<object | null>(null);
+  const [referenceAnnotationData, setReferenceAnnotationData] = useState<object | null>(null);
+
+  // Fetch saved annotations
+  const { data: annotations } = useQuery({
+    queryKey: ['annotations', testId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('annotations')
+        .select('*')
+        .eq('test_id', testId);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!testId,
+  });
+
+  // Load annotation data when annotations are fetched
+  React.useEffect(() => {
+    if (annotations) {
+      const testAnnotation = annotations.find(a => a.image_type === 'test');
+      const refAnnotation = annotations.find(a => 
+        a.image_type === 'reference' && a.reference_dataset_id === selectedDataset?.id
+      );
+      
+      setTestAnnotationData(testAnnotation?.annotation_data as object || null);
+      setReferenceAnnotationData(refAnnotation?.annotation_data as object || null);
+    }
+  }, [annotations, selectedDataset]);
 
   const { data: datasets, isLoading } = useQuery({
     queryKey: ['comparison-datasets', testType],
@@ -506,6 +538,9 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
             imageUrl={testImageUrl}
             title="Annotate Your Test Result"
             onClose={() => setAnnotatingImage(null)}
+            testId={testId}
+            imageType="test"
+            initialAnnotationData={testAnnotationData || undefined}
           />
         )}
         {annotatingImage === 'reference' && selectedDataset?.image_url && (
@@ -513,6 +548,10 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
             imageUrl={selectedDataset.image_url}
             title={`Annotate: ${selectedDataset.name}`}
             onClose={() => setAnnotatingImage(null)}
+            testId={testId}
+            imageType="reference"
+            referenceDatasetId={selectedDataset.id}
+            initialAnnotationData={referenceAnnotationData || undefined}
           />
         )}
       </DialogContent>

@@ -26,8 +26,12 @@ import {
   Download,
   Palette,
   X,
+  Save,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 type AnnotationTool = 'select' | 'draw' | 'rectangle' | 'circle' | 'line' | 'text' | 'eraser';
 
@@ -36,6 +40,10 @@ interface ImageAnnotatorProps {
   onClose?: () => void;
   onSave?: (dataUrl: string) => void;
   title?: string;
+  testId?: string;
+  imageType?: 'test' | 'reference';
+  referenceDatasetId?: string;
+  initialAnnotationData?: object;
 }
 
 const COLORS = [
@@ -55,6 +63,10 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
   onClose,
   onSave,
   title = 'Annotate Image',
+  testId,
+  imageType,
+  referenceDatasetId,
+  initialAnnotationData,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -65,6 +77,8 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isReady, setIsReady] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Initialize canvas
   useEffect(() => {
@@ -145,7 +159,88 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
       return newHistory.slice(-20); // Keep last 20 states
     });
     setHistoryIndex(prev => Math.min(prev + 1, 19));
+    setHasUnsavedChanges(true);
   }, [historyIndex]);
+
+  // Load initial annotation data if provided
+  useEffect(() => {
+    if (fabricCanvas && initialAnnotationData && isReady) {
+      fabricCanvas.loadFromJSON(initialAnnotationData, () => {
+        fabricCanvas.renderAll();
+        setHasUnsavedChanges(false);
+      });
+    }
+  }, [fabricCanvas, initialAnnotationData, isReady]);
+
+  // Save annotation to database
+  const saveToDatabase = async () => {
+    if (!fabricCanvas || !testId || !imageType) {
+      toast.error('Cannot save: missing required information');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('You must be logged in to save annotations');
+        return;
+      }
+
+      const annotationData = fabricCanvas.toJSON();
+      const annotatedImageUrl = fabricCanvas.toDataURL({
+        format: 'png',
+        quality: 1,
+        multiplier: 2,
+      });
+
+      // Check if annotation already exists
+      const { data: existing } = await supabase
+        .from('annotations')
+        .select('id')
+        .eq('test_id', testId)
+        .eq('image_type', imageType)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing annotation
+        const { error } = await supabase
+          .from('annotations')
+          .update({
+            annotation_data: annotationData,
+            annotated_image_url: annotatedImageUrl,
+            reference_dataset_id: referenceDatasetId || null,
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+        toast.success('Annotation updated successfully');
+      } else {
+        // Create new annotation
+        const { error } = await supabase
+          .from('annotations')
+          .insert({
+            test_id: testId,
+            user_id: user.id,
+            image_type: imageType,
+            annotation_data: annotationData,
+            annotated_image_url: annotatedImageUrl,
+            reference_dataset_id: referenceDatasetId || null,
+          });
+
+        if (error) throw error;
+        toast.success('Annotation saved successfully');
+      }
+
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Error saving annotation:', error);
+      toast.error('Failed to save annotation');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Update tool settings
   useEffect(() => {
@@ -446,6 +541,21 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
           <Download className="h-4 w-4 mr-2" />
           Download
         </Button>
+        {testId && imageType && (
+          <Button 
+            size="sm" 
+            onClick={saveToDatabase}
+            disabled={isSaving || !hasUnsavedChanges}
+            variant={hasUnsavedChanges ? 'default' : 'outline'}
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {isSaving ? 'Saving...' : hasUnsavedChanges ? 'Save to Test' : 'Saved'}
+          </Button>
+        )}
         {onSave && (
           <Button size="sm" onClick={handleSave}>
             Save
