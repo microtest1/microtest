@@ -26,7 +26,9 @@ import {
   Clock,
   Stethoscope,
   Pill,
-  Baby
+  Baby,
+  BadgeCheck,
+  Database
 } from 'lucide-react';
 import type { Test, SeverityLevel } from '@/types/database';
 
@@ -336,16 +338,82 @@ const Results: React.FC = () => {
           onConfirm={generatePDF}
         />
 
-        {/* Verification Badge */}
-        {test.verification_code && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium text-foreground">Verification Code</p>
-              <p className="text-lg font-mono font-bold text-primary">{test.verification_code}</p>
+        {/* Verification & Certification Badges */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {test.verification_code && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium text-foreground">Verification Code</p>
+                <p className="text-lg font-mono font-bold text-primary">{test.verification_code}</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          
+          {/* Certification Status */}
+          {(() => {
+            const resultData = test.result_data as Record<string, unknown> | null;
+            const certificationStatus = resultData?.certification_status as string;
+            const matchedDataset = resultData?.matched_dataset as { name: string; classification: string; description: string } | null;
+            const certifiedBy = resultData?.certified_by as string | null;
+            
+            if (certificationStatus === 'certified' && matchedDataset) {
+              return (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-success/10 border border-success/30">
+                  <BadgeCheck className="h-6 w-6 text-success" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">Certified Result</p>
+                      <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-xs">
+                        Verified
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Matched: {matchedDataset.name}
+                    </p>
+                    {certifiedBy && (
+                      <p className="text-xs text-success font-medium mt-0.5">
+                        {certifiedBy}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            } else if (certificationStatus === 'provisional' && matchedDataset) {
+              return (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/10 border border-warning/30">
+                  <Database className="h-5 w-5 text-warning" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">Provisional Match</p>
+                      <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30 text-xs">
+                        Low Confidence
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Reference: {matchedDataset.name}
+                    </p>
+                    <p className="text-xs text-warning font-medium mt-0.5">
+                      Recommend professional verification
+                    </p>
+                  </div>
+                </div>
+              );
+            } else {
+              return (
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-muted/50 border border-border">
+                  <Database className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Reference Pending</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      No matching dataset found
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+          })()}
+        </div>
 
         {/* Main Result Card */}
         <Card className={`relative overflow-hidden ${severityConfig.bgColor} ${severityConfig.borderColor} border-2`}>
