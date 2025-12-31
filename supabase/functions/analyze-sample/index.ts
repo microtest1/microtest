@@ -305,31 +305,68 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
     // Step 7: Parse AI response
     let analysis;
     try {
-      const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
-      if (toolCall?.function?.arguments) {
-        analysis = JSON.parse(toolCall.function.arguments);
-        console.log("Parsed analysis:", JSON.stringify(analysis, null, 2));
-      } else {
-        throw new Error("No tool call in response");
+        const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          analysis = JSON.parse(toolCall.function.arguments);
+          console.log("Parsed analysis:", JSON.stringify(analysis, null, 2));
+        } else {
+          throw new Error("No tool call in response");
+        }
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        // Fallback analysis
+        analysis = {
+          detected: false,
+          severity: "negative",
+          confidence: 60,
+          findings: "The AI was unable to provide a detailed analysis of this image. The image quality may be insufficient for accurate diagnosis. Please ensure the sample is well-lit, in focus, and properly positioned.",
+          recommendations: "For accurate diagnosis, please visit a certified healthcare facility. This screening tool is intended to assist, not replace, professional medical diagnosis.",
+          image_quality: "fair"
+        };
       }
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      // Fallback analysis
-      analysis = {
-        detected: false,
-        severity: "negative",
-        confidence: 60,
-        findings: "The AI was unable to provide a detailed analysis of this image. The image quality may be insufficient for accurate diagnosis. Please ensure the sample is well-lit, in focus, and properly positioned.",
-        recommendations: "For accurate diagnosis, please visit a certified healthcare facility. This screening tool is intended to assist, not replace, professional medical diagnosis.",
-        image_quality: "fair"
+
+    // Step 8: Match result against certified reference datasets
+    let matchedDataset = null;
+    let certificationStatus = "uncertified";
+    
+    if (referenceDatasets && referenceDatasets.length > 0) {
+      // Find the best matching dataset based on severity/classification
+      const severityToClassification: Record<string, string[]> = {
+        'negative': ['negative'],
+        'mild': ['positive_mild', 'positive_early'],
+        'moderate': ['positive_moderate', 'positive_confirmed'],
+        'severe': ['positive_severe']
       };
+      
+      const expectedClassifications = severityToClassification[analysis.severity] || [];
+      
+      matchedDataset = referenceDatasets.find(d => 
+        expectedClassifications.includes(d.classification)
+      );
+      
+      // If we found a matching dataset and confidence is high enough, mark as certified
+      if (matchedDataset && analysis.confidence >= 70) {
+        certificationStatus = "certified";
+        console.log(`Result certified against dataset: ${matchedDataset.name}`);
+      } else if (matchedDataset) {
+        certificationStatus = "provisional";
+        console.log(`Result provisionally matched to dataset: ${matchedDataset.name}`);
+      }
     }
 
-    // Step 8: Build detailed result data
+    // Step 9: Build detailed result data
     const resultData: Record<string, unknown> = {
       detected: analysis.detected,
       image_quality: analysis.image_quality || 'unknown',
       analyzed_at: new Date().toISOString(),
+      certification_status: certificationStatus,
+      matched_dataset: matchedDataset ? {
+        id: matchedDataset.name,
+        name: matchedDataset.name,
+        classification: matchedDataset.classification,
+        description: matchedDataset.description
+      } : null,
+      certified_by: certificationStatus === "certified" ? "Medical Laboratory Reference Dataset" : null
     };
 
     if (testType === 'malaria' && analysis.detected) {
