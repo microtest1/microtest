@@ -162,13 +162,20 @@ serve(async (req) => {
 
     // Step 5: Build comprehensive analysis prompt
     const systemPrompt = testType === 'malaria' 
-      ? `You are an expert medical AI specialized in malaria diagnosis through microscopy analysis. You have extensive training in identifying Plasmodium species in blood smears.
+      ? `You are an expert medical AI specialized in malaria diagnosis through blood sample analysis. You have extensive training in identifying Plasmodium species in blood samples.
 
-ANALYSIS PROTOCOL:
-1. Examine the blood smear for presence of malaria parasites
-2. Identify the parasite stage (ring, trophozoite, schizont, gametocyte)
-3. Estimate parasite density per µL of blood
-4. Assess red blood cell morphology for species identification
+LIQUID DETECTION PROTOCOL (CRITICAL - APPLY FIRST):
+1. FIRST, scan the entire image to detect any liquid sample (blood) present on ANY surface
+2. The blood sample may be placed on: paper, plastic plate, glass slide, white background, colored background, cloth, or ANY other surface
+3. Identify the liquid sample region by looking for: wet appearance, reflective surface, distinct color (red/dark for blood), pooled or smeared patterns
+4. Focus your analysis ONLY on the detected liquid sample area, ignoring the background surface
+5. If no liquid sample is detected, indicate this clearly in your findings
+
+BLOOD SAMPLE ANALYSIS PROTOCOL:
+1. Once liquid is detected, examine for presence of malaria parasites
+2. Identify the parasite stage (ring, trophozoite, schizont, gametocyte) if visible
+3. Estimate parasite density per µL of blood based on visual indicators
+4. Assess blood color, consistency, and any abnormal characteristics
 5. Look for artifacts that could cause false positives
 
 SEVERITY CLASSIFICATION:
@@ -182,20 +189,29 @@ WHO TREATMENT GUIDELINES:
 - For severe malaria: IV artesunate followed by oral ACT
 - For P. vivax/ovale: Chloroquine + primaquine for radical cure
 ${datasetContext}`
-      : `You are an expert medical AI specialized in pregnancy test analysis and early pregnancy assessment.
+      : `You are an expert medical AI specialized in pregnancy test analysis and urine sample assessment.
 
-ANALYSIS PROTOCOL:
-1. Identify the test strip control line (must be visible for valid test)
+LIQUID DETECTION PROTOCOL (CRITICAL - APPLY FIRST):
+1. FIRST, scan the entire image to detect any liquid sample (urine) OR test strip present on ANY surface
+2. The sample may be placed on: paper, plastic plate, test strip, white background, colored background, or ANY other surface
+3. Identify the liquid sample region by looking for: wet appearance, reflective surface, yellowish color for urine, or a test strip with control/test lines
+4. Focus your analysis ONLY on the detected sample/strip area, ignoring the background surface
+5. If analyzing a test strip: locate control line and test line regions
+6. If no liquid sample or test strip is detected, indicate this clearly in your findings
+
+URINE/TEST STRIP ANALYSIS PROTOCOL:
+1. If test strip detected: Check for control line (must be visible for valid test)
 2. Check for presence and intensity of test line
-3. Assess line color intensity for HCG level estimation
-4. Identify any invalid test conditions (missing control line, smearing)
+3. If raw urine sample: analyze color and characteristics for HCG indicators
+4. Assess color intensity for HCG level estimation
+5. Identify any invalid test conditions (missing control line, smearing, contamination)
 
 RESULT CLASSIFICATION:
-- Negative: Only control line visible, no test line
+- Negative: Only control line visible, no test line / No HCG indicators in urine
 - Positive (Early): Faint test line, HCG ~25-100 mIU/mL, estimated 3-4 weeks
 - Positive (Confirmed): Clear test line, HCG >100 mIU/mL, estimated 4-6 weeks
 - Positive (Strong): Dark test line equal to or darker than control, >1000 mIU/mL, 5+ weeks
-- Invalid: No control line visible, test must be repeated
+- Invalid: No control line visible / Unable to analyze sample
 
 WHO PRENATAL RECOMMENDATIONS:
 - Confirm pregnancy with healthcare provider
@@ -222,9 +238,11 @@ ${datasetContext}`;
             content: [
               { 
                 type: "text", 
-                text: `Analyze this ${testType === 'malaria' ? 'blood smear microscopy image' : 'pregnancy test strip image'} and provide your detailed clinical findings. 
-                
-Be thorough in your analysis and provide actionable medical guidance based on WHO protocols.` 
+                text: `Analyze this image for ${testType === 'malaria' ? 'blood sample/malaria' : 'urine sample/pregnancy'} testing.
+
+IMPORTANT: First detect and locate the liquid sample on whatever surface it may be placed on. The sample could be on any background (paper, plastic, glass, cloth, or any surface). Once you identify the liquid sample area, focus your analysis on that region only.
+
+Provide detailed clinical findings and actionable medical guidance based on WHO protocols.` 
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -238,6 +256,14 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
             parameters: {
               type: "object",
               properties: {
+                liquid_detected: {
+                  type: "boolean",
+                  description: "Whether a liquid sample (blood/urine) was successfully detected in the image"
+                },
+                surface_type: {
+                  type: "string",
+                  description: "The type of surface the sample is placed on (paper, plastic, glass, white background, colored background, test strip, etc.)"
+                },
                 detected: { 
                   type: "boolean", 
                   description: "Whether the condition (malaria/pregnancy) was detected" 
@@ -257,7 +283,7 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
                 },
                 findings: { 
                   type: "string", 
-                  description: "Detailed clinical findings including observations about the sample, identified features, and any notable characteristics" 
+                  description: "Detailed clinical findings including observations about the sample, identified features, liquid detection details, and any notable characteristics" 
                 },
                 recommendations: { 
                   type: "string", 
@@ -277,7 +303,7 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
                   description: "Assessment of the submitted image quality for diagnostic purposes"
                 }
               },
-              required: ["detected", "severity", "confidence", "findings", "recommendations", "image_quality"]
+              required: ["liquid_detected", "surface_type", "detected", "severity", "confidence", "findings", "recommendations", "image_quality"]
             }
           }
         }],
@@ -316,10 +342,12 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
         console.error("Failed to parse AI response:", parseError);
         // Fallback analysis
         analysis = {
+          liquid_detected: false,
+          surface_type: "unknown",
           detected: false,
           severity: "negative",
           confidence: 60,
-          findings: "The AI was unable to provide a detailed analysis of this image. The image quality may be insufficient for accurate diagnosis. Please ensure the sample is well-lit, in focus, and properly positioned.",
+          findings: "The AI was unable to provide a detailed analysis of this image. No liquid sample was clearly detected. Please ensure the sample is well-lit, in focus, and properly positioned on a clean surface.",
           recommendations: "For accurate diagnosis, please visit a certified healthcare facility. This screening tool is intended to assist, not replace, professional medical diagnosis.",
           image_quality: "fair"
         };
@@ -356,6 +384,8 @@ Be thorough in your analysis and provide actionable medical guidance based on WH
 
     // Step 9: Build detailed result data
     const resultData: Record<string, unknown> = {
+      liquid_detected: analysis.liquid_detected ?? true,
+      surface_type: analysis.surface_type || 'unknown',
       detected: analysis.detected,
       image_quality: analysis.image_quality || 'unknown',
       analyzed_at: new Date().toISOString(),

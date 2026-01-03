@@ -28,7 +28,9 @@ import {
   Pill,
   Baby,
   BadgeCheck,
-  Database
+  Database,
+  Droplets,
+  Layers
 } from 'lucide-react';
 import type { Test, SeverityLevel } from '@/types/database';
 
@@ -414,6 +416,41 @@ const Results: React.FC = () => {
             }
           })()}
         </div>
+
+        {/* Sample Detection Info */}
+        {(() => {
+          const resultData = test.result_data as Record<string, unknown> | null;
+          const liquidDetected = resultData?.liquid_detected as boolean | undefined;
+          const surfaceType = resultData?.surface_type as string | undefined;
+          
+          if (liquidDetected !== undefined || surfaceType) {
+            return (
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <Droplets className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground">Sample Detection</p>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-xs ${liquidDetected ? 'bg-success/20 text-success border-success/30' : 'bg-destructive/20 text-destructive border-destructive/30'}`}
+                    >
+                      {liquidDetected ? 'Liquid Detected' : 'Not Detected'}
+                    </Badge>
+                  </div>
+                  {surfaceType && surfaceType !== 'unknown' && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">
+                        Surface: <span className="font-medium capitalize">{surfaceType}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         {/* Main Result Card */}
         <Card className={`relative overflow-hidden ${severityConfig.bgColor} ${severityConfig.borderColor} border-2`}>
