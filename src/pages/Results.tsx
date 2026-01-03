@@ -207,6 +207,33 @@ const Results: React.FC = () => {
     
     yPos += 40;
     
+    // Sample Detection Section
+    const resultData = test.result_data as Record<string, unknown>;
+    const liquidDetected = resultData?.liquid_detected as boolean | undefined;
+    const surfaceType = resultData?.surface_type as string | undefined;
+    
+    if (liquidDetected !== undefined || surfaceType) {
+      doc.setFillColor(230, 245, 255);
+      doc.rect(15, yPos - 5, pageWidth - 30, 25, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(60, 60, 60);
+      doc.text('SAMPLE DETECTION', 20, yPos + 5);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      const detectionStatus = liquidDetected ? 'Liquid Sample Detected' : 'No Liquid Sample Detected';
+      doc.text(`Detection Status: ${detectionStatus}`, 20, yPos + 13);
+      
+      if (surfaceType) {
+        doc.text(`Surface Type: ${surfaceType}`, 120, yPos + 13);
+      }
+      
+      yPos += 30;
+    }
+    
     // AI Findings
     if (test.ai_findings) {
       doc.setFont('helvetica', 'bold');
