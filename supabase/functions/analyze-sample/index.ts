@@ -1,10 +1,49 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Get allowed origins from environment, with fallback for development
+const getAllowedOrigin = (requestOrigin: string | null): string => {
+  const allowedOrigins = Deno.env.get("ALLOWED_ORIGINS")?.split(",") || [];
+  
+  // Add localhost origins for development
+  const devOrigins = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:3000"
+  ];
+  
+  // Also allow the Supabase project URL and Lovable preview URLs
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (supabaseUrl) {
+    allowedOrigins.push(supabaseUrl);
+  }
+  
+  // Allow Lovable preview domains
+  if (requestOrigin && (
+    requestOrigin.includes(".lovableproject.com") ||
+    requestOrigin.includes(".lovable.app")
+  )) {
+    return requestOrigin;
+  }
+  
+  const allAllowed = [...allowedOrigins, ...devOrigins];
+  
+  if (requestOrigin && allAllowed.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  
+  // Return empty string if origin not allowed (will be handled in request)
+  return "";
 };
+
+const getCorsHeaders = (origin: string) => ({
+  "Access-Control-Allow-Origin": origin,
+  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+});
 
 // Input validation helper functions
 function isValidUUID(str: string): boolean {
@@ -30,8 +69,25 @@ function isValidImageData(data: string): boolean {
 }
 
 serve(async (req) => {
+  const requestOrigin = req.headers.get("origin");
+  const allowedOrigin = getAllowedOrigin(requestOrigin);
+  const corsHeaders = getCorsHeaders(allowedOrigin || "");
+  
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
+    if (!allowedOrigin) {
+      return new Response(null, { status: 403 });
+    }
     return new Response(null, { headers: corsHeaders });
+  }
+  
+  // Reject requests from unauthorized origins
+  if (!allowedOrigin) {
+    console.error(`Origin not allowed: ${requestOrigin}`);
+    return new Response(
+      JSON.stringify({ error: "Origin not allowed" }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   try {
@@ -439,10 +495,19 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Analysis error:", error);
+    // Generate a unique request ID for support tracking
+    const requestId = crypto.randomUUID().split('-')[0];
+    
+    // Log full error details server-side for debugging
+    console.error(`Analysis error [${requestId}]:`, error);
+    if (error instanceof Error) {
+      console.error(`Error stack [${requestId}]:`, error.stack);
+    }
+    
+    // Return generic error to client - never expose internal error details
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : "An error occurred during analysis. Please try again." 
+        error: "An error occurred during analysis. Please try again. If the issue persists, contact support with reference: " + requestId
       }), 
       {
         status: 500,
