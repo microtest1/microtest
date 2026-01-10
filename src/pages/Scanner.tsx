@@ -9,7 +9,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { MicroscopeControls } from '@/components/MicroscopeControls';
 import { GridOverlay } from '@/components/GridOverlay';
+import { SampleDetectionOverlay } from '@/components/SampleDetectionOverlay';
 import { useImageEnhancement } from '@/hooks/useImageEnhancement';
+import { useRealtimeDetection } from '@/hooks/useRealtimeDetection';
 import { 
   Camera, 
   Upload, 
@@ -19,7 +21,8 @@ import {
   AlertCircle,
   Sparkles,
   Wifi,
-  WifiOff
+  WifiOff,
+  Eye
 } from 'lucide-react';
 import type { TestType } from '@/types/database';
 
@@ -45,11 +48,19 @@ const Scanner: React.FC = () => {
   const [showGrid, setShowGrid] = useState(false);
   const [showEdgeDetection, setShowEdgeDetection] = useState(false);
   const [isAutoFocusing, setIsAutoFocusing] = useState(false);
+  const [showAIDetection, setShowAIDetection] = useState(true);
   const [cameraCapabilities, setCameraCapabilities] = useState<{
     hasTorch: boolean;
     hasFocus: boolean;
     hasZoom: boolean;
   }>({ hasTorch: false, hasFocus: false, hasZoom: false });
+
+  // Real-time AI sample detection
+  const { detection, isDetecting: isAIDetecting } = useRealtimeDetection(videoRef, {
+    enabled: isCameraActive && showAIDetection && !!testType,
+    testType: testType as 'malaria' | 'pregnancy' | '',
+    intervalMs: 2500,
+  });
 
   // Check camera capabilities
   const checkCameraCapabilities = useCallback(async (mediaStream: MediaStream) => {
@@ -389,17 +400,33 @@ const Scanner: React.FC = () => {
                   </div>
                 )}
                 
+                {/* AI Sample Detection Overlay */}
+                <SampleDetectionOverlay
+                  detection={detection}
+                  isDetecting={isAIDetecting}
+                  visible={showAIDetection && !!testType}
+                />
+                
                 {/* Auto-focusing indicator */}
                 {isAutoFocusing && (
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-24 h-24 border-4 border-primary rounded-lg animate-pulse flex items-center justify-center">
                       <span className="text-primary text-sm font-medium">Focusing...</span>
                     </div>
                   </div>
                 )}
                 
-                {/* Capture Button */}
+                {/* Controls overlay - top right */}
                 <div className="absolute top-4 right-4 flex gap-2">
+                  <Button
+                    variant={showAIDetection ? "default" : "secondary"}
+                    size="sm"
+                    onClick={() => setShowAIDetection(!showAIDetection)}
+                    className="gap-1"
+                  >
+                    <Eye className="h-4 w-4" />
+                    AI
+                  </Button>
                   <Button variant="secondary" size="sm" onClick={stopCamera}>
                     <X className="h-4 w-4 mr-1" />
                     Cancel

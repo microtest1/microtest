@@ -2,3 +2,6 @@ project_id = "cbsadwjazebwhfrhbdew"
 
 [functions.analyze-sample]
 verify_jwt = true
+
+[functions.detect-sample]
+verify_jwt = false
