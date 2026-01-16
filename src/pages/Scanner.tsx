@@ -36,7 +36,7 @@ const Scanner: React.FC = () => {
   
   const [testType, setTestType] = useState<TestType | ''>('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [_imageFile, setImageFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -264,7 +264,7 @@ const Scanner: React.FC = () => {
       }
 
       // Call AI analysis edge function
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-sample', {
+      const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
         body: {
           testId: test.id,
           testType,
