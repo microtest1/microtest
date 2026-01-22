@@ -273,7 +273,7 @@ export const ImageAnnotator: React.FC<ImageAnnotatorProps> = ({
     const handleMouseDown = (e: any) => {
       if (activeTool === 'select' || activeTool === 'draw' || activeTool === 'eraser') return;
       
-      const pointer = fabricCanvas.getPointer(e.e);
+      const pointer = fabricCanvas.getScenePoint(e.e);
       let shape;
 
       switch (activeTool) {
