@@ -1,25 +1,172 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// Origin validation for CORS security
+const getAllowedOrigin = (requestOrigin: string | null): string => {
+  const allowedOrigins = Deno.env.get("ALLOWED_ORIGINS")?.split(",") || [];
+  
+  const devOrigins = [
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:5173"
+  ];
+  
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (supabaseUrl) {
+    allowedOrigins.push(supabaseUrl);
+  }
+  
+  // Allow Lovable preview and published URLs
+  if (requestOrigin && (
+    requestOrigin.includes(".lovableproject.com") ||
+    requestOrigin.includes(".lovable.app") ||
+    requestOrigin.includes("-preview--")
+  )) {
+    return requestOrigin;
+  }
+  
+  const allAllowed = [...allowedOrigins, ...devOrigins];
+  
+  if (requestOrigin && allAllowed.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  
+  return "";
 };
 
+const getCorsHeaders = (origin: string) => ({
+  "Access-Control-Allow-Origin": origin || "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+});
+
+// Input validation helpers
+function isValidTestType(type: unknown): type is 'malaria' | 'pregnancy' {
+  return type === 'malaria' || type === 'pregnancy';
+}
+
+function isValidImageData(data: unknown): boolean {
+  if (typeof data !== 'string') return false;
+  
+  const imageDataRegex = /^data:image\/(jpeg|jpg|png|gif|webp);base64,/i;
+  if (!imageDataRegex.test(data)) {
+    return false;
+  }
+  
+  // Limit to 5MB for detection (smaller than full analysis)
+  const maxSizeBytes = 5 * 1024 * 1024;
+  if (data.length > maxSizeBytes * 1.4) {
+    return false;
+  }
+  
+  return true;
+}
+
 serve(async (req) => {
+  const requestOrigin = req.headers.get("origin");
+  const allowedOrigin = getAllowedOrigin(requestOrigin);
+  const corsHeaders = getCorsHeaders(allowedOrigin);
+
   if (req.method === "OPTIONS") {
+    if (!allowedOrigin) {
+      return new Response(null, { status: 403 });
+    }
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Reject unauthorized origins for non-OPTIONS requests
+  if (!allowedOrigin && requestOrigin) {
+    console.error(`Rejected request from unauthorized origin: ${requestOrigin}`);
+    return new Response(
+      JSON.stringify({ 
+        detected: false,
+        sample_type: "none",
+        quality: "none",
+        feedback: "Origin not allowed",
+        ready_for_capture: false
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   try {
+    // Step 1: Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error("Missing or invalid Authorization header");
+      return new Response(
+        JSON.stringify({ 
+          detected: false,
+          sample_type: "none",
+          quality: "none",
+          feedback: "Authentication required",
+          ready_for_capture: false
+        }), 
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    });
+
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+
+    if (claimsError || !claimsData?.claims) {
+      console.error("Authentication failed:", claimsError?.message || "Invalid token");
+      return new Response(
+        JSON.stringify({ 
+          detected: false,
+          sample_type: "none",
+          quality: "none",
+          feedback: "Invalid authentication",
+          ready_for_capture: false
+        }), 
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log(`Detection request from authenticated user: ${userId}`);
+
+    // Step 2: Parse and validate input
     const { imageData, testType } = await req.json();
 
-    if (!imageData || typeof imageData !== "string") {
+    // Validate testType
+    if (!testType || !isValidTestType(testType)) {
+      console.error(`Invalid testType provided: ${testType}`);
       return new Response(
-        JSON.stringify({ error: "imageData is required" }),
+        JSON.stringify({ 
+          detected: false,
+          sample_type: "none",
+          quality: "none",
+          feedback: "Invalid test type",
+          ready_for_capture: false
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Validate imageData
+    if (!imageData || !isValidImageData(imageData)) {
+      console.error("Invalid or missing imageData");
+      return new Response(
+        JSON.stringify({ 
+          detected: false,
+          sample_type: "none",
+          quality: "none",
+          feedback: "Invalid image data",
+          ready_for_capture: false
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Step 3: Process detection with AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -121,6 +268,7 @@ serve(async (req) => {
     
     if (toolCall?.function?.arguments) {
       const detection = JSON.parse(toolCall.function.arguments);
+      console.log(`Detection complete for user ${userId}: detected=${detection.detected}, quality=${detection.quality}`);
       return new Response(
         JSON.stringify(detection),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
