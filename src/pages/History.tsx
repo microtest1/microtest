@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Activity, CheckCircle2, Clock, ChevronRight, Microscope, AlertTriangle, XCircle } from 'lucide-react';
+import { Activity, CheckCircle2, Clock, ChevronRight, Microscope, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Test, SeverityLevel } from '@/types/database';
 
@@ -28,38 +27,31 @@ const History: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const getSeverityConfig = (severity: SeverityLevel | null) => {
+  const getSeverityBadge = (severity: SeverityLevel | null) => {
     switch (severity) {
       case 'severe':
-        return { 
-          color: 'bg-destructive text-destructive-foreground',
-          icon: XCircle,
-          label: 'Severe'
-        };
       case 'moderate':
-        return { 
-          color: 'bg-warning text-warning-foreground',
-          icon: AlertTriangle,
-          label: 'Moderate'
-        };
       case 'mild':
-        return { 
-          color: 'bg-accent text-accent-foreground',
-          icon: Activity,
-          label: 'Mild'
-        };
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 px-2.5 py-1 rounded-full">
+            <AlertTriangle className="h-3 w-3" />
+            Detected
+          </span>
+        );
       case 'negative':
-        return { 
-          color: 'bg-success text-success-foreground',
-          icon: CheckCircle2,
-          label: 'Negative'
-        };
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-success bg-success/10 px-2.5 py-1 rounded-full">
+            <CheckCircle2 className="h-3 w-3" />
+            Not Detected
+          </span>
+        );
       default:
-        return { 
-          color: 'bg-muted text-muted-foreground',
-          icon: Clock,
-          label: 'Pending'
-        };
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+            <Clock className="h-3 w-3" />
+            Processing
+          </span>
+        );
     }
   };
 
@@ -77,31 +69,33 @@ const History: React.FC = () => {
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Activity className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
             Screening History
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 ml-13">
             View all your malaria screening results
           </p>
         </div>
         
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="glass-card animate-pulse">
+              <Card key={i} className="animate-pulse">
                 <CardContent className="p-6"><div className="h-16 bg-muted rounded" /></CardContent>
               </Card>
             ))}
           </div>
         ) : tests.length === 0 ? (
-          <Card className="glass-card">
+          <Card>
             <CardContent className="p-12 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                <Microscope className="h-8 w-8 text-destructive" />
+              <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center mx-auto mb-4">
+                <Microscope className="h-7 w-7 text-muted-foreground" />
               </div>
               <h3 className="font-semibold text-foreground mb-2">No screenings yet</h3>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-sm text-muted-foreground">
                 Start your first malaria screening to see results here
               </p>
             </CardContent>
@@ -113,60 +107,42 @@ const History: React.FC = () => {
                 <h2 className="text-sm font-medium text-muted-foreground px-1">
                   {format(new Date(date), 'EEEE, MMMM d, yyyy')}
                 </h2>
-                <div className="space-y-3">
-                  {dateTests.map((test) => {
-                    const severityConfig = getSeverityConfig(test.severity);
-                    const SeverityIcon = severityConfig.icon;
-                    
-                    return (
-                      <Card 
-                        key={test.id} 
-                        className="glass-card hover:shadow-elevated hover:scale-[1.01] transition-all cursor-pointer group"
-                        onClick={() => navigate(`/results/${test.id}`)}
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:scale-105 transition-transform">
-                              <Microscope className="h-6 w-6 text-destructive" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-foreground">Malaria Screening</h3>
-                                {test.parasite_species && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {test.parasite_species}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(test.created_at), 'h:mm a')}
-                                {test.parasite_density && (
-                                  <span className="ml-2">• Density: {test.parasite_density}</span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              {test.confidence_score && (
-                                <span className="text-sm font-medium text-muted-foreground">
-                                  {Math.round(test.confidence_score)}%
+                <div className="space-y-2">
+                  {dateTests.map((test) => (
+                    <Card 
+                      key={test.id} 
+                      className="hover:shadow-md cursor-pointer transition-all"
+                      onClick={() => navigate(`/results/${test.id}`)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Microscope className="h-5 w-5 text-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-foreground">Malaria Screening</h3>
+                              {test.parasite_species && (
+                                <span className="text-xs text-muted-foreground">
+                                  • {test.parasite_species}
                                 </span>
                               )}
-                              <Badge className={severityConfig.color}>
-                                <SeverityIcon className="h-3 w-3 mr-1" />
-                                {severityConfig.label}
-                              </Badge>
-                              {test.status === 'completed' ? (
-                                <CheckCircle2 className="h-5 w-5 text-success" />
-                              ) : (
-                                <Clock className="h-5 w-5 text-muted-foreground animate-pulse" />
-                              )}
-                              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                             </div>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(test.created_at), 'h:mm a')}
+                              {test.confidence_score && (
+                                <span className="ml-2">• {Math.round(test.confidence_score)}% confidence</span>
+                              )}
+                            </p>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                          <div className="flex items-center gap-3">
+                            {getSeverityBadge(test.severity)}
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
               </div>
             ))}

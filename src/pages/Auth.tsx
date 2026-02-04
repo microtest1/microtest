@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Microscope, Mail, Lock, User, ArrowLeft, Sparkles, Shield, Zap, ArrowRight, Activity, CheckCircle2 } from 'lucide-react';
+import { Microscope, Mail, Lock, User, ArrowRight, Shield, Loader2 } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -75,9 +75,9 @@ const Auth: React.FC = () => {
         const { error } = await signIn(email, password);
         if (error) {
           toast({
-            title: 'Login Failed',
+            title: 'Sign In Failed',
             description: error.message.includes('Invalid login credentials') 
-              ? 'Invalid email or password. Please try again.'
+              ? 'Invalid email or password.'
               : error.message,
             variant: 'destructive',
           });
@@ -90,20 +90,26 @@ const Auth: React.FC = () => {
           toast({
             title: error.message.includes('already registered') ? 'Account Exists' : 'Sign Up Failed',
             description: error.message.includes('already registered') 
-              ? 'An account with this email already exists. Please sign in instead.'
+              ? 'An account with this email already exists.'
               : error.message,
             variant: 'destructive',
           });
         } else {
-          toast({ title: 'Welcome to MicroTest!', description: 'Your account has been created successfully.' });
-          navigate('/dashboard');
+          toast({ 
+            title: 'Account Created', 
+            description: 'Please check your email to verify your account.' 
+          });
+          setMode('signin');
         }
       } else if (mode === 'forgot-password') {
         const { error } = await resetPassword(email);
         if (error) {
           toast({ title: 'Error', description: error.message, variant: 'destructive' });
         } else {
-          toast({ title: 'Password Reset Email Sent', description: 'Check your inbox for instructions to reset your password.' });
+          toast({ 
+            title: 'Reset Email Sent', 
+            description: 'Check your inbox for password reset instructions.' 
+          });
           setMode('signin');
         }
       }
@@ -114,144 +120,107 @@ const Auth: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center gradient-mesh">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl gradient-primary flex items-center justify-center glow-primary animate-pulse">
-              <Microscope className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <div className="absolute -inset-4 rounded-3xl bg-primary/20 animate-ping" />
+          <div className="w-12 h-12 rounded-lg bg-primary flex items-center justify-center">
+            <Microscope className="h-6 w-6 text-primary-foreground animate-pulse" />
           </div>
-          <p className="text-muted-foreground font-medium">Loading...</p>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex gradient-mesh relative overflow-hidden">
-      {/* Animated Background Orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="orb orb-primary w-96 h-96 -top-48 -left-48 animate-blob" />
-        <div className="orb orb-secondary w-80 h-80 top-1/4 -right-40 animate-blob stagger-2" />
-        <div className="orb orb-accent w-72 h-72 bottom-20 left-1/4 animate-blob stagger-4" />
-      </div>
-
+    <div className="min-h-screen flex bg-background">
       {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative p-12 flex-col justify-between">
-        <div className="relative z-10">
-          <Link to="/" className="flex items-center gap-4 mb-16 group">
-            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center glow-primary group-hover:scale-105 transition-transform">
-              <Microscope className="h-7 w-7 text-primary-foreground" />
+      <div className="hidden lg:flex lg:w-1/2 bg-primary relative p-12 flex-col justify-between">
+        <div>
+          <Link to="/" className="flex items-center gap-3 mb-16">
+            <div className="w-11 h-11 rounded-lg bg-white/20 flex items-center justify-center">
+              <Microscope className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold font-display">MicroTest</h1>
-              <p className="text-sm text-muted-foreground">AI Health Diagnostics</p>
+              <h1 className="text-xl font-bold font-display text-white">Microtest</h1>
+              <p className="text-sm text-white/70">Malaria Screening</p>
             </div>
           </Link>
 
-          <div className="max-w-lg space-y-8">
+          <div className="max-w-md">
+            <h2 className="text-4xl font-bold font-display text-white leading-tight mb-6">
+              AI-Assisted Malaria Screening for Healthcare Workers
+            </h2>
+            <p className="text-lg text-white/80 leading-relaxed mb-8">
+              Capture blood smear images and receive preliminary screening results in under 60 seconds.
+            </p>
+
             <div className="space-y-4">
-              <h2 className="text-5xl xl:text-6xl font-bold font-display leading-tight">
-                <span className="text-gradient">Next-Gen</span>
-                <br />
-                Medical Diagnostics
-              </h2>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                Harness the power of AI to detect malaria and pregnancy with laboratory-grade accuracy from your smartphone.
-              </p>
-            </div>
-
-            {/* Feature Cards */}
-            <div className="grid gap-4 pt-8">
-              {[
-                { icon: Sparkles, title: 'AI-Powered Analysis', desc: 'Advanced ML models trained on millions of samples', color: 'primary' },
-                { icon: Shield, title: 'WHO Compliant', desc: 'Following international health standards', color: 'secondary' },
-                { icon: Zap, title: 'Instant Results', desc: 'Get accurate diagnostics in seconds', color: 'accent' },
-              ].map((feature, i) => (
-                <div 
-                  key={feature.title}
-                  className={`glass-card rounded-2xl p-5 hover-lift opacity-0 animate-fade-in-up stagger-${i + 1}`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`icon-container${feature.color !== 'primary' ? `-${feature.color}` : ''} w-12 h-12`}>
-                      <feature.icon className={`h-6 w-6 text-${feature.color}`} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold font-display">{feature.title}</h3>
-                      <p className="text-sm text-muted-foreground">{feature.desc}</p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3 text-white/90">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-4 w-4" />
                 </div>
-              ))}
-            </div>
-
-            {/* Trust Indicators */}
-            <div className="flex items-center gap-6 pt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                <span>HIPAA Compliant</span>
+                <span>Designed for clinics and field settings</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Activity className="h-4 w-4 text-primary" />
-                <span>99.2% Accuracy</span>
+              <div className="flex items-center gap-3 text-white/90">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-4 w-4" />
+                </div>
+                <span>WHO-aligned clinical guidance</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/90">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-4 w-4" />
+                </div>
+                <span>Works offline in remote areas</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-sm text-muted-foreground relative z-10">
-          © 2024 MicroTest. Advancing healthcare through technology.
+        <p className="text-sm text-white/60">
+          © {new Date().getFullYear()} Microtest. For healthcare professional use.
         </p>
       </div>
 
       {/* Right Side - Auth Form */}
-      <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center p-6 lg:p-12">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <Link to="/" className="lg:hidden text-center mb-8 opacity-0 animate-fade-in block">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary glow-primary mb-4">
-              <Microscope className="h-8 w-8 text-primary-foreground" />
+          <Link to="/" className="lg:hidden text-center mb-8 block">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-primary mb-4">
+              <Microscope className="h-7 w-7 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold font-display">MicroTest</h1>
-            <p className="text-muted-foreground">AI-Powered Health Diagnostics</p>
+            <h1 className="text-xl font-bold font-display">Microtest</h1>
+            <p className="text-sm text-muted-foreground">Malaria Screening</p>
           </Link>
 
-          <Card className="glass-card border-0 shadow-elevated opacity-0 animate-fade-in-up">
-            <CardHeader className="space-y-1 pb-6">
+          <Card className="border-border">
+            <CardHeader className="space-y-1 pb-4">
               <CardTitle className="text-2xl font-bold font-display text-center">
-                {mode === 'signin' && 'Welcome back'}
-                {mode === 'signup' && 'Create your account'}
-                {mode === 'forgot-password' && 'Reset password'}
+                {mode === 'signin' && 'Sign In'}
+                {mode === 'signup' && 'Create Account'}
+                {mode === 'forgot-password' && 'Reset Password'}
               </CardTitle>
               <CardDescription className="text-center">
-                {mode === 'signin' && 'Sign in to access your health dashboard'}
-                {mode === 'signup' && 'Start your 14-day free trial today'}
-                {mode === 'forgot-password' && "We'll send you a reset link"}
+                {mode === 'signin' && 'Access your screening dashboard'}
+                {mode === 'signup' && 'Start using Microtest for malaria screening'}
+                {mode === 'forgot-password' && "Enter your email for reset instructions"}
               </CardDescription>
-              
-              {mode === 'signup' && (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-success/10 border border-success/20 rounded-lg px-4 py-2 mt-3">
-                  <Sparkles className="h-4 w-4 text-success" />
-                  <span>No credit card required</span>
-                </div>
-              )}
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div className="space-y-2">
-                    <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
-                    <div className="relative group">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                    <Label htmlFor="fullName">Full Name</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="fullName"
                         type="text"
                         placeholder="Enter your full name"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
+                        className="pl-10 h-11"
                       />
                     </div>
                     {errors.fullName && <p className="text-sm text-destructive">{errors.fullName}</p>}
@@ -259,16 +228,16 @@ const Auth: React.FC = () => {
                 )}
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                  <Label htmlFor="email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
                       placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
+                      className="pl-10 h-11"
                     />
                   </div>
                   {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
@@ -276,16 +245,16 @@ const Auth: React.FC = () => {
                 
                 {mode !== 'forgot-password' && (
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                    <div className="relative group">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                    <Label htmlFor="password">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         id="password"
                         type="password"
                         placeholder="Enter your password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="pl-12 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-card transition-colors"
+                        className="pl-10 h-11"
                       />
                     </div>
                     {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
@@ -294,33 +263,18 @@ const Auth: React.FC = () => {
                 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-xl text-base font-semibold btn-premium shadow-lg shadow-primary/25"
+                  className="w-full h-11 bg-primary hover:bg-primary/90"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin h-5 w-5 border-2 border-current border-t-transparent rounded-full" />
-                      {mode === 'signin' && 'Signing in...'}
-                      {mode === 'signup' && 'Creating account...'}
-                      {mode === 'forgot-password' && 'Sending...'}
-                    </span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <span className="flex items-center gap-2">
-                      {mode === 'signin' && (
-                        <>
-                          Sign In
-                          <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
-                      {mode === 'signup' && (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          Start Free Trial
-                          <ArrowRight className="h-4 w-4" />
-                        </>
-                      )}
+                    <>
+                      {mode === 'signin' && 'Sign In'}
+                      {mode === 'signup' && 'Create Account'}
                       {mode === 'forgot-password' && 'Send Reset Link'}
-                    </span>
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </>
                   )}
                 </Button>
               </form>
@@ -329,17 +283,17 @@ const Auth: React.FC = () => {
                 <>
                   <div className="relative my-6">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-border/50" />
+                      <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-3 text-muted-foreground">Or continue with</span>
+                      <span className="bg-card px-3 text-muted-foreground">Or</span>
                     </div>
                   </div>
 
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-12 rounded-xl border-border/50 hover:bg-muted/50 transition-colors"
+                    className="w-full h-11"
                     onClick={async () => {
                       const { error } = await signInWithGoogle();
                       if (error) {
@@ -351,7 +305,7 @@ const Auth: React.FC = () => {
                       }
                     }}
                   >
-                    <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
+                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                       <path
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                         fill="#4285F4"
@@ -374,13 +328,13 @@ const Auth: React.FC = () => {
                 </>
               )}
               
-              <div className="mt-8 text-center space-y-3">
+              <div className="mt-6 text-center space-y-2">
                 {mode === 'signin' && (
                   <>
                     <button
                       type="button"
                       onClick={() => setMode('forgot-password')}
-                      className="text-sm text-muted-foreground hover:text-primary transition-colors animated-underline"
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
                     >
                       Forgot your password?
                     </button>
@@ -389,7 +343,7 @@ const Auth: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setMode('signup')}
-                        className="text-primary font-semibold hover:text-primary/80 transition-colors"
+                        className="text-primary font-medium hover:underline"
                       >
                         Sign up
                       </button>
@@ -403,7 +357,7 @@ const Auth: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setMode('signin')}
-                      className="text-primary font-semibold hover:text-primary/80 transition-colors"
+                      className="text-primary font-medium hover:underline"
                     >
                       Sign in
                     </button>
@@ -414,9 +368,8 @@ const Auth: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setMode('signin')}
-                    className="inline-flex items-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors font-medium"
+                    className="text-sm text-primary font-medium hover:underline"
                   >
-                    <ArrowLeft className="h-4 w-4" />
                     Back to sign in
                   </button>
                 )}
@@ -424,8 +377,9 @@ const Auth: React.FC = () => {
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-muted-foreground mt-6 opacity-0 animate-fade-in stagger-3">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+          {/* Disclaimer */}
+          <p className="text-xs text-muted-foreground text-center mt-6 max-w-sm mx-auto">
+            By continuing, you acknowledge that Microtest is a screening tool and does not replace professional medical diagnosis.
           </p>
         </div>
       </div>
