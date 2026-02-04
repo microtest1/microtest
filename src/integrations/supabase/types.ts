@@ -220,7 +220,10 @@ export type Database = {
           created_at: string
           enhanced_image_url: string | null
           id: string
-          pregnancy_weeks: number | null
+          image_quality: string | null
+          parasite_density: string | null
+          parasite_species: string | null
+          parasite_stage: string | null
           result_data: Json | null
           sample_image_url: string | null
           severity: Database["public"]["Enums"]["severity_level"] | null
@@ -237,7 +240,10 @@ export type Database = {
           created_at?: string
           enhanced_image_url?: string | null
           id?: string
-          pregnancy_weeks?: number | null
+          image_quality?: string | null
+          parasite_density?: string | null
+          parasite_species?: string | null
+          parasite_stage?: string | null
           result_data?: Json | null
           sample_image_url?: string | null
           severity?: Database["public"]["Enums"]["severity_level"] | null
@@ -254,7 +260,10 @@ export type Database = {
           created_at?: string
           enhanced_image_url?: string | null
           id?: string
-          pregnancy_weeks?: number | null
+          image_quality?: string | null
+          parasite_density?: string | null
+          parasite_species?: string | null
+          parasite_stage?: string | null
           result_data?: Json | null
           sample_image_url?: string | null
           severity?: Database["public"]["Enums"]["severity_level"] | null
@@ -343,7 +352,7 @@ export type Database = {
       app_role: "patient" | "healthworker" | "admin"
       severity_level: "negative" | "mild" | "moderate" | "severe"
       subscription_plan: "free" | "pro" | "clinic"
-      test_type: "malaria" | "pregnancy"
+      test_type: "malaria"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -474,7 +483,7 @@ export const Constants = {
       app_role: ["patient", "healthworker", "admin"],
       severity_level: ["negative", "mild", "moderate", "severe"],
       subscription_plan: ["free", "pro", "clinic"],
-      test_type: ["malaria", "pregnancy"],
+      test_type: ["malaria"],
     },
   },
 } as const
