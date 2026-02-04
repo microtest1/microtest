@@ -20,8 +20,10 @@ import {
   XCircle,
   TrendingUp,
   Sparkles,
-  Baby,
-  ChevronRight
+  ChevronRight,
+  Target,
+  Shield,
+  Zap
 } from "lucide-react";
 import type { Test, SeverityLevel } from "@/types/database";
 
@@ -29,7 +31,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
 
-  // Fetch user's tests
   const { data: tests, isLoading } = useQuery({
     queryKey: ['user-tests', user?.id],
     queryFn: async () => {
@@ -46,10 +47,10 @@ const Dashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Calculate stats
   const totalTests = tests?.length || 0;
   const pendingTests = tests?.filter(t => t.status === 'processing')?.length || 0;
   const completedTests = tests?.filter(t => t.status === 'completed')?.length || 0;
+  const positiveTests = tests?.filter(t => t.severity && t.severity !== 'negative')?.length || 0;
 
   const getSeverityConfig = (severity: SeverityLevel | null) => {
     switch (severity) {
@@ -68,7 +69,7 @@ const Dashboard = () => {
 
   const stats = [
     { 
-      label: "Total Tests", 
+      label: "Total Screenings", 
       value: totalTests.toString(), 
       icon: Activity,
       color: "primary",
@@ -88,22 +89,12 @@ const Dashboard = () => {
       color: "success",
       bgColor: "bg-success/10"
     },
-  ];
-
-  const quickActions = [
-    {
-      title: "Malaria Test",
-      description: "Blood smear analysis",
-      icon: Microscope,
-      color: "primary",
-      onClick: () => navigate('/scanner'),
-    },
-    {
-      title: "Pregnancy Test",
-      description: "Urine sample analysis",
-      icon: Baby,
-      color: "secondary",
-      onClick: () => navigate('/scanner'),
+    { 
+      label: "Positive Cases", 
+      value: positiveTests.toString(), 
+      icon: AlertTriangle,
+      color: "destructive",
+      bgColor: "bg-destructive/10"
     },
   ];
 
@@ -116,21 +107,46 @@ const Dashboard = () => {
             <h1 className="text-3xl font-bold font-display text-foreground">
               Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
             </h1>
-            <p className="text-muted-foreground mt-1">Here's an overview of your diagnostic tests</p>
+            <p className="text-muted-foreground mt-1">Your malaria screening dashboard</p>
           </div>
           <Button
             size="lg"
-            className="btn-premium shadow-lg shadow-primary/25"
+            className="btn-premium shadow-lg shadow-primary/25 bg-destructive hover:bg-destructive/90"
             onClick={() => navigate("/scanner")}
           >
-            <Sparkles className="h-5 w-5 mr-2" />
-            New Test
+            <Microscope className="h-5 w-5 mr-2" />
+            New Screening
             <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
         </div>
 
+        {/* Malaria Info Banner */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+            <Target className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Parasite Detection</p>
+              <p className="text-xs text-muted-foreground">P. falciparum, P. vivax, P. ovale, P. malariae</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/5 border border-warning/20">
+            <Zap className="h-5 w-5 text-warning" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Fast Analysis</p>
+              <p className="text-xs text-muted-foreground">Results in under 60 seconds</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-success/5 border border-success/20">
+            <Shield className="h-5 w-5 text-success" />
+            <div>
+              <p className="text-sm font-medium text-foreground">WHO Guidelines</p>
+              <p className="text-xs text-muted-foreground">Evidence-based recommendations</p>
+            </div>
+          </div>
+        </div>
+
         {/* Stats Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-4">
           {stats.map((stat) => (
             <Card 
               key={stat.label} 
@@ -157,34 +173,29 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Quick Actions */}
+        {/* Quick Action */}
         <div>
           <h2 className="text-xl font-semibold font-display mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             Quick Actions
           </h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {quickActions.map((action) => (
-              <button
-                key={action.title}
-                onClick={action.onClick}
-                className="glass-card rounded-2xl p-6 text-left hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-14 h-14 rounded-xl bg-${action.color}/10 flex items-center justify-center group-hover:bg-${action.color} group-hover:shadow-lg transition-all`}>
-                      <action.icon className={`h-7 w-7 text-${action.color} group-hover:text-${action.color}-foreground transition-colors`} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold font-display text-foreground">{action.title}</h3>
-                      <p className="text-sm text-muted-foreground">{action.description}</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+          <button
+            onClick={() => navigate('/scanner')}
+            className="w-full glass-card rounded-2xl p-6 text-left hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-destructive/10 flex items-center justify-center group-hover:bg-destructive group-hover:shadow-lg transition-all">
+                  <Microscope className="h-7 w-7 text-destructive group-hover:text-destructive-foreground transition-colors" />
                 </div>
-              </button>
-            ))}
-          </div>
+                <div>
+                  <h3 className="font-semibold font-display text-foreground">Malaria Blood Smear Analysis</h3>
+                  <p className="text-sm text-muted-foreground">Capture and analyze blood smear for Plasmodium parasites</p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+            </div>
+          </button>
         </div>
 
         {/* Recent Tests */}
@@ -193,7 +204,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 font-display">
                 <FileText className="h-5 w-5 text-primary" />
-                Recent Tests
+                Recent Screenings
               </CardTitle>
               {tests && tests.length > 0 && (
                 <Button variant="ghost" size="sm" onClick={() => navigate('/history')}>
@@ -229,16 +240,12 @@ const Dashboard = () => {
                       onClick={() => navigate(`/results/${test.id}`)}
                       className="w-full p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors text-left"
                     >
-                      <div className={`w-12 h-12 rounded-xl ${test.test_type === 'malaria' ? 'bg-primary/10' : 'bg-secondary/10'} flex items-center justify-center`}>
-                        {test.test_type === 'malaria' ? (
-                          <Microscope className="h-6 w-6 text-primary" />
-                        ) : (
-                          <Baby className="h-6 w-6 text-secondary" />
-                        )}
+                      <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                        <Microscope className="h-6 w-6 text-destructive" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground capitalize">
-                          {test.test_type} Test
+                        <p className="font-medium text-foreground">
+                          Malaria Screening
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(test.created_at), 'MMM d, yyyy • h:mm a')}
@@ -262,16 +269,16 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="p-12 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                  <Microscope className="h-8 w-8 text-muted-foreground" />
+                <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                  <Microscope className="h-8 w-8 text-destructive" />
                 </div>
-                <h3 className="font-semibold text-foreground mb-2">No tests yet</h3>
+                <h3 className="font-semibold text-foreground mb-2">No screenings yet</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Start your first AI-powered diagnostic test
+                  Start your first AI-powered malaria screening
                 </p>
-                <Button onClick={() => navigate('/scanner')}>
+                <Button onClick={() => navigate('/scanner')} className="bg-destructive hover:bg-destructive/90">
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Start New Test
+                  Start Screening
                 </Button>
               </div>
             )}
@@ -285,8 +292,8 @@ const Dashboard = () => {
               <Activity className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">99.2% Accuracy</p>
-              <p className="text-sm text-muted-foreground">AI-powered precision</p>
+              <p className="font-semibold text-foreground">AI-Powered</p>
+              <p className="text-sm text-muted-foreground">Deep learning detection</p>
             </div>
           </div>
           <div className="glass-card rounded-xl p-5 flex items-center gap-4">
@@ -294,8 +301,8 @@ const Dashboard = () => {
               <Clock className="h-6 w-6 text-success" />
             </div>
             <div>
-              <p className="font-semibold text-foreground">45s Average</p>
-              <p className="text-sm text-muted-foreground">Processing time</p>
+              <p className="font-semibold text-foreground">&lt;60s Analysis</p>
+              <p className="text-sm text-muted-foreground">Rapid screening results</p>
             </div>
           </div>
           <div className="glass-card rounded-xl p-5 flex items-center gap-4">

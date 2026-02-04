@@ -41,8 +41,8 @@ const getCorsHeaders = (origin: string) => ({
 });
 
 // Input validation helpers
-function isValidTestType(type: unknown): type is 'malaria' | 'pregnancy' {
-  return type === 'malaria' || type === 'pregnancy';
+function isValidTestType(type: unknown): type is 'malaria' {
+  return type === 'malaria';
 }
 
 function isValidImageData(data: unknown): boolean {
@@ -131,12 +131,12 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
-    console.log(`Detection request from authenticated user: ${userId}`);
+    console.log(`Blood sample detection request from authenticated user: ${userId}`);
 
     // Step 2: Parse and validate input
     const { imageData, testType } = await req.json();
 
-    // Validate testType
+    // Validate testType - only malaria is supported
     if (!testType || !isValidTestType(testType)) {
       console.error(`Invalid testType provided: ${testType}`);
       return new Response(
@@ -144,7 +144,7 @@ serve(async (req) => {
           detected: false,
           sample_type: "none",
           quality: "none",
-          feedback: "Invalid test type",
+          feedback: "Invalid test type - only malaria screening supported",
           ready_for_capture: false
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -172,8 +172,6 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const sampleType = testType === "pregnancy" ? "urine" : "blood";
-
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -185,14 +183,18 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a sample detection AI. Your ONLY job is to quickly detect if there is a ${sampleType} sample visible in the image and estimate its position. Be fast and concise.`
+            content: `You are a blood sample detection AI for malaria screening. Your ONLY job is to quickly detect if there is a blood sample (thin or thick blood smear) visible in the microscopy image and estimate its position. Be fast and concise. Look for:
+- Red blood cells visible
+- Stained blood smear appearance (Giemsa, Wright, or Field stain)
+- Proper magnification (400x-1000x)
+- Sample clarity and focus`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: `Quickly scan this image for a ${sampleType} sample. Report if detected and its approximate position in the frame. Is the sample well-positioned and visible for analysis?`
+                text: `Quickly scan this microscopy image for a blood sample suitable for malaria parasite detection. Report if blood cells are detected and if the sample is well-positioned and focused for analysis.`
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -202,17 +204,17 @@ serve(async (req) => {
           type: "function",
           function: {
             name: "report_detection",
-            description: "Report the sample detection results",
+            description: "Report the blood sample detection results",
             parameters: {
               type: "object",
               properties: {
                 detected: {
                   type: "boolean",
-                  description: "Whether a liquid sample was detected"
+                  description: "Whether a blood sample was detected"
                 },
                 sample_type: {
                   type: "string",
-                  enum: ["blood", "urine", "test_strip", "unknown", "none"],
+                  enum: ["blood", "unknown", "none"],
                   description: "Type of sample detected"
                 },
                 position: {
@@ -229,7 +231,7 @@ serve(async (req) => {
                 quality: {
                   type: "string",
                   enum: ["excellent", "good", "fair", "poor", "none"],
-                  description: "Quality of sample visibility for analysis"
+                  description: "Quality of sample visibility for malaria analysis"
                 },
                 feedback: {
                   type: "string",

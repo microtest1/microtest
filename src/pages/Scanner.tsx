@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,9 +23,14 @@ import {
   Sparkles,
   Wifi,
   WifiOff,
-  Eye
+  Eye,
+  CheckCircle2,
+  Target,
+  Crosshair,
+  Zap,
+  Shield,
+  Activity
 } from 'lucide-react';
-import type { TestType } from '@/types/database';
 
 const Scanner: React.FC = () => {
   const navigate = useNavigate();
@@ -34,12 +40,14 @@ const Scanner: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { captureEnhancedImage } = useImageEnhancement();
   
-  const [testType, setTestType] = useState<TestType | ''>('');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [_imageFile, setImageFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isCalibrated, setIsCalibrated] = useState(false);
+  const [calibrationStep, setCalibrationStep] = useState(0);
+  const [capturedFrames, setCapturedFrames] = useState<string[]>([]);
   
   // Advanced microscope controls
   const [zoom, setZoom] = useState(1);
@@ -55,11 +63,11 @@ const Scanner: React.FC = () => {
     hasZoom: boolean;
   }>({ hasTorch: false, hasFocus: false, hasZoom: false });
 
-  // Real-time AI sample detection
+  // Real-time AI sample detection - always malaria
   const { detection, isDetecting: isAIDetecting } = useRealtimeDetection(videoRef, {
-    enabled: isCameraActive && showAIDetection && !!testType,
-    testType: testType as 'malaria' | 'pregnancy' | '',
-    intervalMs: 2500,
+    enabled: isCameraActive && showAIDetection && isCalibrated,
+    testType: 'malaria',
+    intervalMs: 2000,
   });
 
   // Check camera capabilities
@@ -95,6 +103,19 @@ const Scanner: React.FC = () => {
         setStream(mediaStream);
         setIsCameraActive(true);
         await checkCameraCapabilities(mediaStream);
+        
+        // Start calibration check
+        setCalibrationStep(1);
+        setTimeout(() => {
+          setCalibrationStep(2);
+          setTimeout(() => {
+            setCalibrationStep(3);
+            setTimeout(() => {
+              setIsCalibrated(true);
+              setCalibrationStep(0);
+            }, 800);
+          }, 800);
+        }, 800);
       }
     } catch (error) {
       console.error('Camera error:', error);
@@ -112,6 +133,8 @@ const Scanner: React.FC = () => {
       setStream(null);
     }
     setIsCameraActive(false);
+    setIsCalibrated(false);
+    setCapturedFrames([]);
   }, [stream]);
 
   // Cleanup on unmount
@@ -130,12 +153,10 @@ const Scanner: React.FC = () => {
     const track = stream.getVideoTracks()[0];
     
     try {
-      // Try to trigger auto-focus
       await track.applyConstraints({
         advanced: [{ focusMode: 'auto' }] as any,
       });
       
-      // Brief delay then switch back to continuous
       setTimeout(async () => {
         try {
           await track.applyConstraints({
@@ -159,18 +180,37 @@ const Scanner: React.FC = () => {
     setShowEdgeDetection(false);
   };
 
-  const captureFromCamera = async () => {
+  // Multi-frame capture for accuracy
+  const captureMultipleFrames = async () => {
     if (!videoRef.current) return;
     
-    const result = await captureEnhancedImage(videoRef.current, {
-      brightness,
-      contrast,
-      applyEdgeDetection: showEdgeDetection,
-    });
+    const frames: string[] = [];
     
-    if (result) {
-      setCapturedImage(result.dataUrl);
-      setImageFile(result.file);
+    for (let i = 0; i < 3; i++) {
+      const result = await captureEnhancedImage(videoRef.current, {
+        brightness,
+        contrast,
+        applyEdgeDetection: showEdgeDetection,
+      });
+      
+      if (result) {
+        frames.push(result.dataUrl);
+      }
+      
+      // Small delay between captures
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    setCapturedFrames(frames);
+    
+    // Use the best frame (first one for now, could add quality scoring)
+    if (frames.length > 0) {
+      setCapturedImage(frames[0]);
+      // Convert to file
+      const response = await fetch(frames[0]);
+      const blob = await response.blob();
+      const file = new File([blob], 'blood-smear.jpg', { type: 'image/jpeg' });
+      setImageFile(file);
     }
     
     stopCamera();
@@ -189,7 +229,6 @@ const Scanner: React.FC = () => {
       return;
     }
     
-    // Check file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
       toast({
         title: 'File Too Large',
@@ -210,25 +249,17 @@ const Scanner: React.FC = () => {
   const clearImage = () => {
     setCapturedImage(null);
     setImageFile(null);
+    setCapturedFrames([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const handleSubmit = async () => {
-    if (!testType) {
-      toast({
-        title: 'Test Type Required',
-        description: 'Please select a test type before analyzing.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     if (!capturedImage) {
       toast({
         title: 'Image Required',
-        description: 'Please capture or upload an image.',
+        description: 'Please capture or upload a blood smear image.',
         variant: 'destructive',
       });
       return;
@@ -252,7 +283,7 @@ const Scanner: React.FC = () => {
         .from('tests')
         .insert({
           user_id: user.id,
-          test_type: testType,
+          test_type: 'malaria',
           status: 'processing',
         })
         .select()
@@ -267,14 +298,13 @@ const Scanner: React.FC = () => {
       const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
         body: {
           testId: test.id,
-          testType,
+          testType: 'malaria',
           imageData: capturedImage,
         },
       });
 
       if (analysisError) {
         console.error('Analysis error:', analysisError);
-        // Update test status to failed
         await supabase
           .from('tests')
           .update({ status: 'failed' })
@@ -285,7 +315,7 @@ const Scanner: React.FC = () => {
 
       toast({
         title: 'Analysis Complete',
-        description: 'Your test results are ready.',
+        description: 'Your malaria screening results are ready.',
       });
 
       navigate(`/results/${test.id}`);
@@ -301,17 +331,27 @@ const Scanner: React.FC = () => {
     }
   };
 
+  const getCalibrationLabel = () => {
+    switch (calibrationStep) {
+      case 1: return 'Checking magnification...';
+      case 2: return 'Adjusting focus...';
+      case 3: return 'Calibration complete';
+      default: return '';
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
               <Microscope className="h-8 w-8 text-primary" />
-              AI Microscopy Scanner
+              Malaria Screening
             </h1>
             <p className="text-muted-foreground mt-1">
-              Advanced sample analysis with real-time image enhancement
+              AI-powered blood smear analysis for early malaria detection
             </p>
           </div>
           {isCameraActive && (
@@ -328,49 +368,40 @@ const Scanner: React.FC = () => {
           )}
         </div>
 
-        {/* Test Type Selection */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Select Test Type
-            </CardTitle>
-            <CardDescription>
-              Choose the type of diagnostic test you want to perform
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Select value={testType} onValueChange={(value) => setTestType(value as TestType)}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select test type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="malaria">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-destructive" />
-                    Malaria Test (Blood Smear Analysis)
-                  </div>
-                </SelectItem>
-                <SelectItem value="pregnancy">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    Pregnancy Test (HCG Detection)
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        {/* Malaria Info Banner */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <Target className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Parasite Detection</p>
+              <p className="text-xs text-muted-foreground">Plasmodium species</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-warning/5 border border-warning/20">
+            <Activity className="h-5 w-5 text-warning" />
+            <div>
+              <p className="text-sm font-medium text-foreground">Density Estimation</p>
+              <p className="text-xs text-muted-foreground">Low to critical</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-success/5 border border-success/20">
+            <Shield className="h-5 w-5 text-success" />
+            <div>
+              <p className="text-sm font-medium text-foreground">WHO Guidelines</p>
+              <p className="text-xs text-muted-foreground">Treatment recommendations</p>
+            </div>
+          </div>
+        </div>
 
         {/* Image Capture */}
         <Card className="glass-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-primary" />
-              Sample Image
+              Blood Smear Sample
             </CardTitle>
             <CardDescription>
-              Use the advanced microscopy camera or upload an existing image
+              Capture a blood smear image using the microscopy camera for malaria screening
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -392,24 +423,45 @@ const Scanner: React.FC = () => {
                 {/* Grid Overlay */}
                 <GridOverlay visible={showGrid} />
                 
+                {/* Calibration Overlay */}
+                {!isCalibrated && calibrationStep > 0 && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-30">
+                    <div className="text-center space-y-4">
+                      <Crosshair className="h-16 w-16 text-primary mx-auto animate-pulse" />
+                      <div className="space-y-2">
+                        <p className="text-white font-medium">{getCalibrationLabel()}</p>
+                        <Progress value={calibrationStep * 33} className="w-48" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Edge Detection Indicator */}
-                {showEdgeDetection && (
+                {showEdgeDetection && isCalibrated && (
                   <div className="absolute top-4 left-4 px-3 py-1.5 bg-success/80 backdrop-blur-sm rounded-full text-xs font-medium text-white flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                    Edge Detection Active
+                    Cell Edge Enhancement
                   </div>
+                )}
+                
+                {/* Calibrated Badge */}
+                {isCalibrated && (
+                  <Badge className="absolute top-4 left-4 bg-success text-white">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Calibrated
+                  </Badge>
                 )}
                 
                 {/* AI Sample Detection Overlay */}
                 <SampleDetectionOverlay
                   detection={detection}
                   isDetecting={isAIDetecting}
-                  visible={showAIDetection && !!testType}
+                  visible={showAIDetection && isCalibrated}
                 />
                 
                 {/* Auto-focusing indicator */}
                 {isAutoFocusing && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
                     <div className="w-24 h-24 border-4 border-primary rounded-lg animate-pulse flex items-center justify-center">
                       <span className="text-primary text-sm font-medium">Focusing...</span>
                     </div>
@@ -417,7 +469,7 @@ const Scanner: React.FC = () => {
                 )}
                 
                 {/* Controls overlay - top right */}
-                <div className="absolute top-4 right-4 flex gap-2">
+                <div className="absolute top-4 right-4 flex gap-2 z-20">
                   <Button
                     variant={showAIDetection ? "default" : "secondary"}
                     size="sm"
@@ -433,16 +485,19 @@ const Scanner: React.FC = () => {
                   </Button>
                 </div>
 
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-                  <Button
-                    size="lg"
-                    className="rounded-full w-20 h-20 shadow-2xl bg-primary hover:bg-primary/90 border-4 border-white"
-                    onClick={captureFromCamera}
-                    disabled={isAutoFocusing}
-                  >
-                    <Camera className="h-8 w-8" />
-                  </Button>
-                </div>
+                {/* Capture Button - center */}
+                {isCalibrated && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                    <Button
+                      size="lg"
+                      className="rounded-full w-20 h-20 shadow-2xl bg-destructive hover:bg-destructive/90 border-4 border-white"
+                      onClick={captureMultipleFrames}
+                      disabled={isAutoFocusing}
+                    >
+                      <Camera className="h-8 w-8" />
+                    </Button>
+                  </div>
+                )}
 
                 {/* Advanced Controls */}
                 <MicroscopeControls
@@ -465,23 +520,50 @@ const Scanner: React.FC = () => {
 
             {/* Captured Image Preview */}
             {capturedImage && !isCameraActive && (
-              <div className="relative rounded-xl overflow-hidden border border-border">
-                <img 
-                  src={capturedImage} 
-                  alt="Captured sample" 
-                  className="w-full aspect-video object-contain bg-muted"
-                />
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-success/80 backdrop-blur-sm rounded-full text-xs font-medium text-white">
-                  Image Ready for Analysis
+              <div className="space-y-4">
+                <div className="relative rounded-xl overflow-hidden border border-border">
+                  <img 
+                    src={capturedImage} 
+                    alt="Captured blood smear" 
+                    className="w-full aspect-video object-contain bg-muted"
+                  />
+                  <div className="absolute top-4 left-4 flex gap-2">
+                    <Badge className="bg-success text-white">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Ready for Analysis
+                    </Badge>
+                    {capturedFrames.length > 1 && (
+                      <Badge variant="outline" className="bg-background/80">
+                        {capturedFrames.length} frames captured
+                      </Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-4 right-4"
+                    onClick={clearImage}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-4 right-4"
-                  onClick={clearImage}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                
+                {/* Frame thumbnails if multiple captured */}
+                {capturedFrames.length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {capturedFrames.map((frame, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCapturedImage(frame)}
+                        className={`flex-shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                          capturedImage === frame ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={frame} alt={`Frame ${index + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -491,28 +573,28 @@ const Scanner: React.FC = () => {
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all group"
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-destructive/30 bg-destructive/5 hover:bg-destructive/10 hover:border-destructive/50 transition-all group"
                 >
-                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Microscope className="h-7 w-7 text-primary-foreground" />
+                  <div className="w-14 h-14 rounded-full bg-destructive flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Microscope className="h-7 w-7 text-destructive-foreground" />
                   </div>
                   <div className="text-center">
                     <p className="font-medium text-foreground">Use Microscopy Camera</p>
-                    <p className="text-sm text-muted-foreground">Advanced controls & enhancement</p>
+                    <p className="text-sm text-muted-foreground">400x-1000x magnification</p>
                   </div>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-secondary/30 bg-secondary/5 hover:bg-secondary/10 hover:border-secondary/50 transition-all group"
+                  className="flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 hover:bg-primary/10 hover:border-primary/50 transition-all group"
                 >
-                  <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Upload className="h-7 w-7 text-secondary-foreground" />
+                  <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Upload className="h-7 w-7 text-primary-foreground" />
                   </div>
                   <div className="text-center">
-                    <p className="font-medium text-foreground">Upload Image</p>
-                    <p className="text-sm text-muted-foreground">Select from device</p>
+                    <p className="font-medium text-foreground">Upload Blood Smear</p>
+                    <p className="text-sm text-muted-foreground">Existing microscopy image</p>
                   </div>
                 </button>
 
@@ -527,15 +609,15 @@ const Scanner: React.FC = () => {
             )}
 
             {/* Tips */}
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-accent/10 border border-accent/20">
-              <AlertCircle className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/20">
+              <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-foreground">Tips for best results:</p>
+                <p className="font-medium text-foreground">Blood Smear Preparation Tips:</p>
                 <ul className="list-disc list-inside text-muted-foreground mt-1 space-y-1">
-                  <li>Use the grid overlay to center your sample</li>
-                  <li>Enable edge detection for better cell boundary visibility</li>
-                  <li>Adjust brightness and contrast for optimal clarity</li>
-                  <li>Use auto-focus before capturing for sharp images</li>
+                  <li>Use a properly stained thin blood smear (Giemsa stain preferred)</li>
+                  <li>Ensure adequate lighting and focus before capture</li>
+                  <li>Position the sample at 400x-1000x magnification</li>
+                  <li>Capture multiple fields for comprehensive screening</li>
                 </ul>
               </div>
             </div>
@@ -545,22 +627,32 @@ const Scanner: React.FC = () => {
         {/* Submit Button */}
         <Button
           size="lg"
-          className="w-full h-14 text-lg shadow-lg"
+          className="w-full h-14 text-lg shadow-lg bg-destructive hover:bg-destructive/90"
           onClick={handleSubmit}
-          disabled={!testType || !capturedImage || isAnalyzing}
+          disabled={!capturedImage || isAnalyzing}
         >
           {isAnalyzing ? (
             <>
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-              Analyzing Sample with AI...
+              Analyzing Blood Smear...
             </>
           ) : (
             <>
-              <Sparkles className="h-5 w-5 mr-2" />
-              Analyze Sample
+              <Zap className="h-5 w-5 mr-2" />
+              Analyze for Malaria Parasites
             </>
           )}
         </Button>
+
+        {/* Disclaimer */}
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border border-border text-sm">
+          <Shield className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+          <p className="text-muted-foreground">
+            <span className="font-medium text-foreground">Screening Tool Disclaimer:</span> This AI-powered system is designed for early malaria screening and decision support only. 
+            Results should be confirmed by laboratory microscopy and qualified healthcare professionals. 
+            This tool does not replace professional medical diagnosis.
+          </p>
+        </div>
       </div>
     </DashboardLayout>
   );

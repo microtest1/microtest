@@ -1,8 +1,10 @@
 export type AppRole = 'patient' | 'healthworker' | 'admin';
-export type TestType = 'malaria' | 'pregnancy';
+export type TestType = 'malaria';
 export type SeverityLevel = 'negative' | 'mild' | 'moderate' | 'severe';
 export type SubscriptionPlan = 'free' | 'pro' | 'clinic';
 export type TestStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ParasiteDensity = 'low' | 'medium' | 'high' | 'critical';
+export type ImageQuality = 'excellent' | 'good' | 'fair' | 'poor';
 
 export interface Profile {
   id: string;
@@ -30,12 +32,15 @@ export interface Test {
   enhanced_image_url: string | null;
   result_data: Record<string, unknown>;
   severity: SeverityLevel | null;
-  pregnancy_weeks: number | null;
   confidence_score: number | null;
   ai_findings: string | null;
   who_recommendations: string | null;
   verification_code: string | null;
   status: TestStatus;
+  parasite_species: string | null;
+  parasite_density: ParasiteDensity | null;
+  parasite_stage: string | null;
+  image_quality: ImageQuality | null;
   created_at: string;
   updated_at: string;
 }
@@ -63,4 +68,23 @@ export interface Dataset {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+// Malaria-specific types
+export interface MalariaAnalysisResult {
+  parasitesDetected: boolean;
+  species: string | null;
+  density: ParasiteDensity | null;
+  stage: string | null;
+  confidence: number;
+  findings: string;
+  recommendations: string;
+  imageQuality: ImageQuality;
+}
+
+export interface CalibrationStatus {
+  isCalibrated: boolean;
+  magnification: string;
+  lastCalibration: string | null;
+  focusQuality: 'excellent' | 'good' | 'fair' | 'poor';
 }
