@@ -11,10 +11,7 @@ import {
   LogOut, 
   Menu, 
   X,
-  Users,
   FileText,
-  CreditCard,
-  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,22 +21,16 @@ interface DashboardLayoutProps {
 
 const navItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/scanner', icon: Camera, label: 'New Test' },
-  { path: '/history', icon: History, label: 'Test History' },
-  { path: '/datasets', icon: FileText, label: 'Reference Datasets' },
-  { path: '/subscription', icon: CreditCard, label: 'Subscription' },
+  { path: '/scanner', icon: Camera, label: 'New Screening' },
+  { path: '/history', icon: History, label: 'History' },
+  { path: '/datasets', icon: FileText, label: 'Reference Data' },
   { path: '/settings', icon: Settings, label: 'Settings' },
-];
-
-const adminNavItems = [
-  { path: '/admin', icon: Users, label: 'Admin Console' },
-  { path: '/admin/datasets', icon: FileText, label: 'Datasets' },
 ];
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut, profile, role } = useAuth();
+  const { signOut, profile } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -47,30 +38,21 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
     navigate('/auth');
   };
 
-  const isAdmin = role === 'admin';
-
   return (
-    <div className="min-h-screen gradient-mesh relative">
-      {/* Background Orbs */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="orb orb-primary w-[600px] h-[600px] -top-64 -right-64 opacity-40 animate-blob" />
-        <div className="orb orb-accent w-[500px] h-[500px] bottom-0 -left-64 opacity-30 animate-blob stagger-3" />
-      </div>
-
+    <div className="min-h-screen bg-background">
       {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 glass-card border-b border-border/50">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-background border-b border-border">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center glow-primary">
+            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
               <Microscope className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold font-display text-lg">MicroTest</span>
+            <span className="font-bold font-display">Microtest</span>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="rounded-xl"
           >
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
@@ -80,47 +62,44 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-40 bg-background/60 backdrop-blur-md"
+          className="lg:hidden fixed inset-0 z-40 bg-background/80 backdrop-blur-sm"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed left-0 top-0 z-40 h-screen w-72 glass-card border-r border-border/50 transition-transform duration-300 ease-out",
+        "fixed left-0 top-0 z-40 h-screen w-64 bg-card border-r border-border transition-transform duration-200",
         "lg:translate-x-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex items-center gap-4 p-6 border-b border-border/50">
-            <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center glow-primary">
-              <Microscope className="h-6 w-6 text-primary-foreground" />
+          <div className="flex items-center gap-3 p-5 border-b border-border">
+            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
+              <Microscope className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-bold font-display text-xl">MicroTest</h1>
-              <p className="text-xs text-muted-foreground">AI Health Diagnostics</p>
+              <h1 className="font-bold font-display text-lg">Microtest</h1>
+              <p className="text-xs text-muted-foreground">Malaria Screening</p>
             </div>
           </div>
 
           {/* User Info */}
-          <div className="p-4 mx-4 mt-4 rounded-2xl bg-muted/30 border border-border/50">
+          <div className="p-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground font-semibold">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                 {profile?.full_name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{profile?.full_name || 'User'}</p>
-                <p className="text-xs text-muted-foreground capitalize flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  {role || 'Patient'}
-                </p>
+                <p className="text-sm font-medium truncate">{profile?.full_name || 'User'}</p>
+                <p className="text-xs text-muted-foreground">Healthcare Worker</p>
               </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -131,60 +110,26 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                     setIsMobileMenuOpen(false);
                   }}
                   className={cn(
-                    "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                     isActive 
-                      ? "gradient-primary text-primary-foreground glow-primary" 
-                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                      ? "bg-primary text-primary-foreground" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <item.icon className="h-5 w-5" />
-                  <span className="flex-1 text-left">{item.label}</span>
-                  {isActive && <ChevronRight className="h-4 w-4" />}
+                  <item.icon className="h-4 w-4" />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
-
-            {/* Admin Section */}
-            {isAdmin && (
-              <>
-                <div className="pt-6 pb-2">
-                  <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Administration
-                  </p>
-                </div>
-                {adminNavItems.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <button
-                      key={item.path}
-                      onClick={() => {
-                        navigate(item.path);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200",
-                        isActive 
-                          ? "gradient-accent text-accent-foreground glow-accent" 
-                          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      <span className="flex-1 text-left">{item.label}</span>
-                      {isActive && <ChevronRight className="h-4 w-4" />}
-                    </button>
-                  );
-                })}
-              </>
-            )}
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-border/50">
+          <div className="p-3 border-t border-border">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-destructive hover:bg-destructive/10 transition-all duration-200"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-4 w-4" />
               Sign Out
             </button>
           </div>
@@ -192,9 +137,9 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
       </aside>
 
       {/* Main content */}
-      <main className="lg:ml-72 pt-20 lg:pt-0 min-h-screen relative">
+      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
         <div className="p-4 lg:p-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-6xl">
             {children}
           </div>
         </div>
