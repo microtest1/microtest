@@ -51,8 +51,8 @@ function isValidUUID(str: string): boolean {
   return uuidRegex.test(str);
 }
 
-function isValidTestType(type: string): type is 'malaria' | 'pregnancy' {
-  return type === 'malaria' || type === 'pregnancy';
+function isValidTestType(type: string): type is 'malaria' {
+  return type === 'malaria';
 }
 
 function isValidImageData(data: string): boolean {
@@ -145,11 +145,11 @@ serve(async (req) => {
       );
     }
 
-    // Validate testType
+    // Validate testType - only malaria is supported
     if (!testType || typeof testType !== 'string' || !isValidTestType(testType)) {
       console.error("Invalid testType:", testType);
       return new Response(
-        JSON.stringify({ error: 'Invalid request: testType must be "malaria" or "pregnancy"' }), 
+        JSON.stringify({ error: 'Invalid request: testType must be "malaria"' }), 
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -186,7 +186,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Analyzing ${testType} test: ${testId} for user: ${user.id}`);
+    console.log(`Analyzing malaria test: ${testId} for user: ${user.id}`);
 
     // Step 4: Fetch reference datasets for comparison
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -194,7 +194,7 @@ serve(async (req) => {
     const { data: referenceDatasets, error: datasetError } = await supabaseAdmin
       .from('datasets')
       .select('name, description, classification, metadata')
-      .eq('test_type', testType)
+      .eq('test_type', 'malaria')
       .limit(10);
 
     if (datasetError) {
@@ -202,7 +202,7 @@ serve(async (req) => {
     }
 
     const datasetContext = referenceDatasets && referenceDatasets.length > 0
-      ? `\n\nReference Dataset Information for ${testType} tests:\n${referenceDatasets.map(d => 
+      ? `\n\nReference Dataset Information for malaria tests:\n${referenceDatasets.map(d => 
           `- ${d.name}: ${d.description} (Classification: ${d.classification})`
         ).join('\n')}`
       : '';
@@ -216,68 +216,40 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Step 5: Build comprehensive analysis prompt
-    const systemPrompt = testType === 'malaria' 
-      ? `You are an expert medical AI specialized in malaria diagnosis through blood sample analysis. You have extensive training in identifying Plasmodium species in blood samples.
+    // Step 5: Build comprehensive malaria analysis prompt
+    const systemPrompt = `You are an expert medical AI specialized in malaria diagnosis through blood sample analysis. You have extensive training in identifying Plasmodium species in blood samples from thin and thick blood smears.
 
 LIQUID DETECTION PROTOCOL (CRITICAL - APPLY FIRST):
-1. FIRST, scan the entire image to detect any liquid sample (blood) present on ANY surface
-2. The blood sample may be placed on: paper, plastic plate, glass slide, white background, colored background, cloth, or ANY other surface
-3. Identify the liquid sample region by looking for: wet appearance, reflective surface, distinct color (red/dark for blood), pooled or smeared patterns
-4. Focus your analysis ONLY on the detected liquid sample area, ignoring the background surface
-5. If no liquid sample is detected, indicate this clearly in your findings
+1. FIRST, scan the entire image to detect any blood sample present
+2. The blood sample may be placed on: glass slide, white background, or any microscopy surface
+3. Identify the blood sample region by looking for: red blood cells, stained appearance, parasites
+4. Focus your analysis ONLY on the detected blood sample area
+5. If no blood sample is detected, indicate this clearly in your findings
 
-BLOOD SAMPLE ANALYSIS PROTOCOL:
-1. Once liquid is detected, examine for presence of malaria parasites
-2. Identify the parasite stage (ring, trophozoite, schizont, gametocyte) if visible
-3. Estimate parasite density per µL of blood based on visual indicators
-4. Assess blood color, consistency, and any abnormal characteristics
-5. Look for artifacts that could cause false positives
+BLOOD SMEAR ANALYSIS PROTOCOL:
+1. Once blood is detected, examine for presence of malaria parasites (Plasmodium species)
+2. Identify the Plasmodium species if possible: P. falciparum, P. vivax, P. ovale, P. malariae, P. knowlesi
+3. Identify the parasite stage (ring, trophozoite, schizont, gametocyte) if visible
+4. Estimate parasite density: low (<1000/µL), medium (1000-10000/µL), high (10000-100000/µL), critical (>100000/µL)
+5. Assess blood color, red cell morphology, and any abnormal characteristics
+6. Look for artifacts or staining issues that could cause false positives
 
 SEVERITY CLASSIFICATION:
 - Negative: No parasites detected
-- Mild: <1000 parasites/µL, early stage infection
-- Moderate: 1000-10000 parasites/µL, established infection
-- Severe: >10000 parasites/µL or presence of schizonts, requires urgent treatment
+- Mild: Low parasite density, early stage infection, no severe symptoms expected
+- Moderate: Medium parasite density, established infection requiring treatment
+- Severe: High/critical parasite density, presence of schizonts, or concerning features requiring urgent treatment
 
-WHO TREATMENT GUIDELINES:
-- For uncomplicated P. falciparum: Artemisinin-based combination therapy (ACT)
-- For severe malaria: IV artesunate followed by oral ACT
-- For P. vivax/ovale: Chloroquine + primaquine for radical cure
-${datasetContext}`
-      : `You are an expert medical AI specialized in pregnancy test analysis and urine sample assessment.
-
-LIQUID DETECTION PROTOCOL (CRITICAL - APPLY FIRST):
-1. FIRST, scan the entire image to detect any liquid sample (urine) OR test strip present on ANY surface
-2. The sample may be placed on: paper, plastic plate, test strip, white background, colored background, or ANY other surface
-3. Identify the liquid sample region by looking for: wet appearance, reflective surface, yellowish color for urine, or a test strip with control/test lines
-4. Focus your analysis ONLY on the detected sample/strip area, ignoring the background surface
-5. If analyzing a test strip: locate control line and test line regions
-6. If no liquid sample or test strip is detected, indicate this clearly in your findings
-
-URINE/TEST STRIP ANALYSIS PROTOCOL:
-1. If test strip detected: Check for control line (must be visible for valid test)
-2. Check for presence and intensity of test line
-3. If raw urine sample: analyze color and characteristics for HCG indicators
-4. Assess color intensity for HCG level estimation
-5. Identify any invalid test conditions (missing control line, smearing, contamination)
-
-RESULT CLASSIFICATION:
-- Negative: Only control line visible, no test line / No HCG indicators in urine
-- Positive (Early): Faint test line, HCG ~25-100 mIU/mL, estimated 3-4 weeks
-- Positive (Confirmed): Clear test line, HCG >100 mIU/mL, estimated 4-6 weeks
-- Positive (Strong): Dark test line equal to or darker than control, >1000 mIU/mL, 5+ weeks
-- Invalid: No control line visible / Unable to analyze sample
-
-WHO PRENATAL RECOMMENDATIONS:
-- Confirm pregnancy with healthcare provider
-- Begin prenatal vitamins with folic acid
-- Schedule first prenatal visit within 12 weeks
-- Avoid alcohol, tobacco, and certain medications
+WHO TREATMENT GUIDELINES (2023):
+- For uncomplicated P. falciparum: Artemisinin-based combination therapy (ACT) for 3 days
+- For severe malaria: IV artesunate (2.4 mg/kg at 0, 12, 24 hours) followed by oral ACT
+- For P. vivax/ovale: Chloroquine + primaquine for radical cure (check G6PD status)
+- For P. malariae/knowlesi: Chloroquine or ACT
+- Special considerations for pregnant women, children under 5, and immunocompromised
 ${datasetContext}`;
 
     // Step 6: Call AI for analysis
-    console.log("Sending image to AI for analysis...");
+    console.log("Sending blood smear image to AI for malaria analysis...");
     
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -294,11 +266,17 @@ ${datasetContext}`;
             content: [
               { 
                 type: "text", 
-                text: `Analyze this image for ${testType === 'malaria' ? 'blood sample/malaria' : 'urine sample/pregnancy'} testing.
+                text: `Analyze this blood smear microscopy image for malaria parasites.
 
-IMPORTANT: First detect and locate the liquid sample on whatever surface it may be placed on. The sample could be on any background (paper, plastic, glass, cloth, or any surface). Once you identify the liquid sample area, focus your analysis on that region only.
+IMPORTANT: 
+1. First detect and locate the blood sample in the image
+2. Examine for Plasmodium parasites at all life stages
+3. Identify species if possible
+4. Estimate parasite density
+5. Assess image quality for diagnostic purposes
+6. Provide WHO-compliant treatment recommendations if positive
 
-Provide detailed clinical findings and actionable medical guidance based on WHO protocols.` 
+Remember: This is a SCREENING tool. Results should be confirmed by laboratory microscopy.` 
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -308,30 +286,26 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
           type: "function",
           function: {
             name: "submit_analysis",
-            description: "Submit the complete analysis results with all clinical findings",
+            description: "Submit the complete malaria analysis results",
             parameters: {
               type: "object",
               properties: {
                 liquid_detected: {
                   type: "boolean",
-                  description: "Whether a liquid sample (blood/urine) was successfully detected in the image"
+                  description: "Whether a blood sample was successfully detected in the image"
                 },
                 surface_type: {
                   type: "string",
-                  description: "The type of surface the sample is placed on (paper, plastic, glass, white background, colored background, test strip, etc.)"
+                  description: "The type of surface/slide the sample is on (glass slide, white background, etc.)"
                 },
                 detected: { 
                   type: "boolean", 
-                  description: "Whether the condition (malaria/pregnancy) was detected" 
+                  description: "Whether malaria parasites were detected" 
                 },
                 severity: { 
                   type: "string", 
                   enum: ["negative", "mild", "moderate", "severe"], 
-                  description: "Severity level of the finding" 
-                },
-                pregnancy_weeks: { 
-                  type: "number", 
-                  description: "Estimated pregnancy weeks if applicable (pregnancy tests only)" 
+                  description: "Severity level of malaria infection" 
                 },
                 confidence: { 
                   type: "number", 
@@ -339,19 +313,24 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
                 },
                 findings: { 
                   type: "string", 
-                  description: "Detailed clinical findings including observations about the sample, identified features, liquid detection details, and any notable characteristics" 
+                  description: "Detailed clinical findings including observations about parasites, red blood cells, and any notable characteristics" 
                 },
                 recommendations: { 
                   type: "string", 
-                  description: "WHO-based treatment or care recommendations tailored to the specific findings" 
+                  description: "WHO-based treatment recommendations tailored to the specific findings" 
                 },
                 parasite_species: {
                   type: "string",
-                  description: "For malaria: Identified Plasmodium species if detected (P. falciparum, P. vivax, P. ovale, P. malariae, P. knowlesi, or mixed)"
+                  description: "Identified Plasmodium species (P. falciparum, P. vivax, P. ovale, P. malariae, P. knowlesi, mixed, or unknown)"
+                },
+                parasite_density: {
+                  type: "string",
+                  enum: ["low", "medium", "high", "critical"],
+                  description: "Estimated parasite density level"
                 },
                 parasite_stage: {
                   type: "string",
-                  description: "For malaria: Predominant parasite stage observed (ring, trophozoite, schizont, gametocyte)"
+                  description: "Predominant parasite stage observed (ring, trophozoite, schizont, gametocyte, or multiple)"
                 },
                 image_quality: {
                   type: "string",
@@ -403,8 +382,8 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
           detected: false,
           severity: "negative",
           confidence: 60,
-          findings: "The AI was unable to provide a detailed analysis of this image. No liquid sample was clearly detected. Please ensure the sample is well-lit, in focus, and properly positioned on a clean surface.",
-          recommendations: "For accurate diagnosis, please visit a certified healthcare facility. This screening tool is intended to assist, not replace, professional medical diagnosis.",
+          findings: "The AI was unable to provide a detailed analysis of this blood smear image. No blood sample was clearly detected. Please ensure the sample is well-stained, properly focused, and at adequate magnification (400x-1000x).",
+          recommendations: "For accurate malaria diagnosis, please visit a certified healthcare facility for laboratory microscopy. This screening tool is intended to assist, not replace, professional medical diagnosis.",
           image_quality: "fair"
         };
       }
@@ -455,23 +434,28 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
       certified_by: certificationStatus === "certified" ? "Medical Laboratory Reference Dataset" : null
     };
 
-    if (testType === 'malaria' && analysis.detected) {
+    // Add malaria-specific data
+    if (analysis.detected) {
       resultData.parasite_species = analysis.parasite_species || 'Unknown';
       resultData.parasite_stage = analysis.parasite_stage || 'Unknown';
+      resultData.parasite_density = analysis.parasite_density || null;
     }
 
-    // Step 9: Update test in database
+    // Step 10: Update test in database with new malaria-specific columns
     const { error: updateError } = await supabaseAdmin
       .from('tests')
       .update({
         status: "completed",
         severity: analysis.severity || "negative",
-        pregnancy_weeks: analysis.pregnancy_weeks || null,
         confidence_score: Math.min(100, Math.max(0, analysis.confidence || 0)),
         ai_findings: analysis.findings,
         who_recommendations: analysis.recommendations,
         result_data: resultData,
-        verification_code: `MT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        verification_code: `MT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        parasite_species: analysis.detected ? (analysis.parasite_species || null) : null,
+        parasite_density: analysis.detected ? (analysis.parasite_density || null) : null,
+        parasite_stage: analysis.detected ? (analysis.parasite_stage || null) : null,
+        image_quality: analysis.image_quality || null
       })
       .eq('id', testId)
       .eq('user_id', user.id);
@@ -481,7 +465,7 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
       throw new Error("Failed to save analysis results");
     }
 
-    console.log(`Analysis complete for test ${testId} - Severity: ${analysis.severity}, Confidence: ${analysis.confidence}%`);
+    console.log(`Malaria analysis complete for test ${testId} - Severity: ${analysis.severity}, Confidence: ${analysis.confidence}%, Species: ${analysis.parasite_species || 'N/A'}`);
 
     return new Response(JSON.stringify({ 
       success: true, 
@@ -489,7 +473,9 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
         detected: analysis.detected,
         severity: analysis.severity,
         confidence: analysis.confidence,
-        image_quality: analysis.image_quality
+        image_quality: analysis.image_quality,
+        parasite_species: analysis.parasite_species,
+        parasite_density: analysis.parasite_density
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -499,7 +485,7 @@ Provide detailed clinical findings and actionable medical guidance based on WHO 
     const requestId = crypto.randomUUID().split('-')[0];
     
     // Log full error details server-side for debugging
-    console.error(`Analysis error [${requestId}]:`, error);
+    console.error(`Malaria analysis error [${requestId}]:`, error);
     if (error instanceof Error) {
       console.error(`Error stack [${requestId}]:`, error.stack);
     }

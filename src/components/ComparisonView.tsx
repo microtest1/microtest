@@ -18,7 +18,6 @@ import {
 import {
   ArrowLeftRight,
   Microscope,
-  Baby,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -37,7 +36,7 @@ interface Dataset {
   id: string;
   name: string;
   description: string | null;
-  test_type: 'malaria' | 'pregnancy';
+  test_type: 'malaria';
   classification: string | null;
   image_url: string | null;
   metadata?: Record<string, unknown>;
@@ -45,7 +44,7 @@ interface Dataset {
 
 interface ComparisonViewProps {
   testId: string;
-  testType: 'malaria' | 'pregnancy';
+  testType: 'malaria';
   testImageUrl?: string | null;
   testSeverity?: string | null;
   testFindings?: string | null;
@@ -219,11 +218,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
                   </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground">
-                    {testType === 'malaria' ? (
-                      <Microscope className="h-12 w-12 mb-2 opacity-40" />
-                    ) : (
-                      <Baby className="h-12 w-12 mb-2 opacity-40" />
-                    )}
+                    <Microscope className="h-12 w-12 mb-2 opacity-40" />
                     <span className="text-sm">No image available</span>
                   </div>
                 )}
@@ -378,11 +373,7 @@ export const ComparisonView: React.FC<ComparisonViewProps> = ({
                         />
                       ) : (
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          {testType === 'malaria' ? (
-                            <Microscope className="h-6 w-6 text-muted-foreground" />
-                          ) : (
-                            <Baby className="h-6 w-6 text-muted-foreground" />
-                          )}
+                          <Microscope className="h-6 w-6 text-muted-foreground" />
                         </div>
                       )}
                       <div className={cn(

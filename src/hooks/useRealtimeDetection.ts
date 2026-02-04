@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface DetectionResult {
   detected: boolean;
-  sample_type: 'blood' | 'urine' | 'test_strip' | 'unknown' | 'none';
+  sample_type: 'blood' | 'unknown' | 'none';
   position?: {
     x: number;
     y: number;
@@ -17,7 +17,7 @@ export interface DetectionResult {
 
 interface UseRealtimeDetectionOptions {
   enabled: boolean;
-  testType: 'malaria' | 'pregnancy' | '';
+  testType: 'malaria' | '';
   intervalMs?: number;
 }
 
@@ -64,7 +64,7 @@ export function useRealtimeDetection(
 
     try {
       const { data, error } = await supabase.functions.invoke('detect-sample', {
-        body: { imageData: frameData, testType },
+        body: { imageData: frameData, testType: 'malaria' },
       });
 
       if (error) {

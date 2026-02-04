@@ -175,7 +175,7 @@ const Results: React.FC = () => {
     
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text(`Test Type: ${test.test_type.charAt(0).toUpperCase() + test.test_type.slice(1)} Test`, 20, yPos);
+    doc.text(`Test Type: Malaria Screening`, 20, yPos);
     yPos += 7;
     doc.text(`Test Date: ${format(new Date(test.created_at), 'MMMM d, yyyy • h:mm a')}`, 20, yPos);
     yPos += 7;
@@ -199,10 +199,6 @@ const Results: React.FC = () => {
     
     if (test.confidence_score) {
       doc.text(`Confidence Score: ${test.confidence_score}%`, 20, yPos + 12);
-    }
-    
-    if (test.test_type === 'pregnancy' && test.pregnancy_weeks) {
-      doc.text(`Estimated Duration: ${test.pregnancy_weeks} weeks`, 20, yPos + 19);
     }
     
     yPos += 40;
@@ -487,18 +483,14 @@ const Results: React.FC = () => {
             <div className="flex items-start gap-6">
               {/* Test Type Icon */}
               <div className={`w-20 h-20 rounded-2xl ${severityConfig.bgColor} flex items-center justify-center shrink-0`}>
-                {test.test_type === 'malaria' ? (
-                  <Microscope className={`h-10 w-10 ${severityConfig.textColor}`} />
-                ) : (
-                  <Baby className={`h-10 w-10 ${severityConfig.textColor}`} />
-                )}
+                <Microscope className={`h-10 w-10 ${severityConfig.textColor}`} />
               </div>
 
               <div className="flex-1 space-y-4">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold capitalize">
-                      {test.test_type} Test
+                    <h2 className="text-2xl font-bold">
+                      Malaria Screening
                     </h2>
                     <Badge 
                       className={`${severityConfig.color} text-white px-3 py-1 text-sm font-medium`}
@@ -506,12 +498,6 @@ const Results: React.FC = () => {
                       {severityConfig.label}
                     </Badge>
                   </div>
-                  
-                  {test.test_type === 'pregnancy' && test.pregnancy_weeks && (
-                    <p className="text-lg text-foreground">
-                      Estimated Duration: <span className="font-bold">{test.pregnancy_weeks} weeks</span>
-                    </p>
-                  )}
                 </div>
 
                 {/* Severity Visualization */}
