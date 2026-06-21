@@ -117,9 +117,9 @@ const Index = () => {
                 { k: "94%+", v: "Sensitivity*" },
                 { k: "Offline", v: "Field-ready" },
               ].map((s) => (
-                <div key={s.v} className="bg-background/40 px-4 py-4 text-center">
-                  <div className="font-display text-2xl font-bold text-gradient-primary">{s.k}</div>
-                  <div className="mt-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">{s.v}</div>
+                <div key={s.v} className="bg-background/40 px-2 py-4 text-center">
+                  <div className="font-display text-lg sm:text-2xl font-bold text-gradient-primary leading-none">{s.k}</div>
+                  <div className="mt-1.5 text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground">{s.v}</div>
                 </div>
               ))}
             </div>
