@@ -431,7 +431,35 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
       resultData.parasite_density = analysis.parasite_density || null;
     }
 
-    // Step 10: Update test in database with new malaria-specific columns
+    // Sanitize detected_regions: clamp to [0,1], cap to 10
+    const rawRegions = Array.isArray(analysis.detected_regions) ? analysis.detected_regions : [];
+    const detectedRegions = rawRegions.slice(0, 10).map((r: Record<string, unknown>) => ({
+      x: Math.max(0, Math.min(1, Number(r.x) || 0)),
+      y: Math.max(0, Math.min(1, Number(r.y) || 0)),
+      width: Math.max(0, Math.min(1, Number(r.width) || 0)),
+      height: Math.max(0, Math.min(1, Number(r.height) || 0)),
+      label: typeof r.label === 'string' ? r.label.slice(0, 60) : 'parasite candidate',
+      confidence: Math.max(0, Math.min(100, Number(r.confidence) || 0)),
+    }));
+
+    const qualityIssues = Array.isArray(analysis.quality_issues)
+      ? analysis.quality_issues.slice(0, 10).map((q: unknown) => String(q).slice(0, 100))
+      : [];
+
+    const riskLevel: 'low' | 'medium' | 'high' =
+      ['low', 'medium', 'high'].includes(analysis.risk_classification)
+        ? analysis.risk_classification
+        : (analysis.severity === 'severe' || analysis.severity === 'moderate' ? 'high'
+          : analysis.severity === 'mild' ? 'medium' : 'low');
+
+    const parasiteCount = Math.max(0, Math.min(10000, Number(analysis.parasite_count) || 0));
+
+    resultData.risk_level = riskLevel;
+    resultData.parasite_count = parasiteCount;
+    resultData.detected_regions = detectedRegions;
+    resultData.quality_issues = qualityIssues;
+
+    // Step 10: Update test in database
     const { error: updateError } = await supabaseAdmin
       .from('tests')
       .update({
@@ -445,7 +473,11 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
         parasite_species: analysis.detected ? (analysis.parasite_species || null) : null,
         parasite_density: analysis.detected ? (analysis.parasite_density || null) : null,
         parasite_stage: analysis.detected ? (analysis.parasite_stage || null) : null,
-        image_quality: analysis.image_quality || null
+        image_quality: analysis.image_quality || null,
+        risk_level: riskLevel,
+        parasite_count: parasiteCount,
+        detected_regions: detectedRegions,
+        quality_issues: qualityIssues,
       })
       .eq('id', testId)
       .eq('user_id', user.id);
@@ -455,17 +487,21 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
       throw new Error("Failed to save analysis results");
     }
 
-    console.log(`Malaria analysis complete for test ${testId} - Severity: ${analysis.severity}, Confidence: ${analysis.confidence}%, Species: ${analysis.parasite_species || 'N/A'}`);
+    console.log(`Malaria analysis complete: ${testId} severity=${analysis.severity} risk=${riskLevel} count=${parasiteCount} conf=${analysis.confidence}%`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       analysis: {
         detected: analysis.detected,
         severity: analysis.severity,
+        risk_level: riskLevel,
         confidence: analysis.confidence,
         image_quality: analysis.image_quality,
         parasite_species: analysis.parasite_species,
-        parasite_density: analysis.parasite_density
+        parasite_density: analysis.parasite_density,
+        parasite_count: parasiteCount,
+        detected_regions: detectedRegions,
+        quality_issues: qualityIssues,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
