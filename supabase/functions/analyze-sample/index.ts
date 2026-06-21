@@ -91,6 +91,8 @@ serve(async (req) => {
     );
   }
 
+  let activeTestId: string | null = null;
+
   try {
     // Step 1: Verify authentication
     const authHeader = req.headers.get('Authorization');
@@ -210,6 +212,8 @@ serve(async (req) => {
       test = createdTest;
       testId = createdTest.id;
     }
+
+    activeTestId = testId;
 
     if (test.user_id !== user.id) {
       console.error(`Authorization failed: User ${user.id} attempted to access test owned by ${test.user_id}`);
@@ -538,6 +542,19 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    if (activeTestId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        await supabaseAdmin
+          .from('tests')
+          .update({ status: 'failed' })
+          .eq('id', activeTestId);
+      }
+    }
+
     // Generate a unique request ID for support tracking
     const requestId = crypto.randomUUID().split('-')[0];
     
