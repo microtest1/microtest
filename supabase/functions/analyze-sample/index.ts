@@ -290,6 +290,7 @@ ${datasetContext}`;
       method: "POST",
       headers: {
         "Lovable-API-Key": LOVABLE_API_KEY,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
