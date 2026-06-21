@@ -12,7 +12,6 @@ import {
   Database, 
   Search, 
   Microscope, 
-  Baby, 
   ExternalLink,
   AlertCircle,
   CheckCircle,
@@ -32,7 +31,7 @@ interface Dataset {
   id: string;
   name: string;
   description: string | null;
-  test_type: 'malaria' | 'pregnancy';
+  test_type: 'malaria';
   classification: string | null;
   image_url: string | null;
   created_at: string;
@@ -40,7 +39,7 @@ interface Dataset {
 }
 
 const Datasets: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'malaria' | 'pregnancy'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'malaria'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
 
@@ -92,8 +91,6 @@ const Datasets: React.FC = () => {
   };
 
   const malariaCount = datasets?.filter(d => d.test_type === 'malaria').length || 0;
-  const pregnancyCount = datasets?.filter(d => d.test_type === 'pregnancy').length || 0;
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
