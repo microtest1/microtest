@@ -109,9 +109,6 @@ const Datasets: React.FC = () => {
             <span className="px-3 py-1.5 rounded-full bg-destructive/10 text-destructive">
               {malariaCount} Malaria
             </span>
-            <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-              {pregnancyCount} Pregnancy
-            </span>
           </div>
         </div>
 
@@ -129,7 +126,7 @@ const Datasets: React.FC = () => {
                 />
               </div>
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="all" className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     All
@@ -137,10 +134,6 @@ const Datasets: React.FC = () => {
                   <TabsTrigger value="malaria" className="flex items-center gap-2">
                     <Microscope className="h-4 w-4" />
                     Malaria
-                  </TabsTrigger>
-                  <TabsTrigger value="pregnancy" className="flex items-center gap-2">
-                    <Baby className="h-4 w-4" />
-                    Pregnancy
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
