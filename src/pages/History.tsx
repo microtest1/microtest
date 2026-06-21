@@ -181,17 +181,8 @@ const History: React.FC = () => {
           </Card>
         )}
 
-        <div>
-          <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Activity className="h-5 w-5 text-primary" />
-            </div>
-            Screening History
-          </h1>
-          <p className="text-muted-foreground mt-1 ml-13">
-            View all your malaria screening results
-          </p>
         </div>
+
         
         {isLoading ? (
           <div className="space-y-3">
