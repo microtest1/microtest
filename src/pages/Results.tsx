@@ -481,7 +481,7 @@ const Results: React.FC = () => {
       M,
       H - 34,
     );
-    doc.text(`${SYSTEM_VERSION}  •  ${AI_ENGINE}  •  Report ${reportId}`, M, H - 22);
+    doc.text(`${SYSTEM_VERSION}  •  Report ${reportId}`, M, H - 22);
     doc.text(`Page 1 / 1`, W - M, H - 22, { align: 'right' });
 
     doc.save(`Microtest-Report-${test.verification_code || reportId}.pdf`);
