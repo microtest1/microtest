@@ -276,7 +276,7 @@ WHO TREATMENT GUIDELINES (2023):
 - For severe malaria: IV artesunate (2.4 mg/kg at 0, 12, 24 hours) followed by oral ACT
 - For P. vivax/ovale: Chloroquine + primaquine for radical cure (check G6PD status)
 - For P. malariae/knowlesi: Chloroquine or ACT
-- Special considerations for pregnant women, children under 5, and immunocompromised
+- Special considerations for children under 5 and immunocompromised patients
 ${datasetContext}`;
 
     // Step 6: Call AI for analysis
