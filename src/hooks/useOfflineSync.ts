@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { analyzeSample } from '@/lib/analyzeSample';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PendingTest {
   id: string;
@@ -105,16 +106,10 @@ export function useOfflineSync() {
   // Sync a single pending test
   const syncTest = useCallback(async (pendingTest: PendingTest, _userId: string): Promise<boolean> => {
     try {
-      const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
-        body: {
-          testType: 'malaria',
-          imageData: pendingTest.imageData,
-        },
+      await analyzeSample({
+        testType: 'malaria',
+        imageData: pendingTest.imageData,
       });
-
-      if (analysisError) {
-        throw analysisError;
-      }
 
       return true;
     } catch (error) {

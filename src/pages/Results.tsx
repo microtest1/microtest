@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PDFCustomizationDialog } from '@/components/PDFCustomizationDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import { 
@@ -37,10 +38,11 @@ interface PDFCustomizationData {
 const Results: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [showPDFDialog, setShowPDFDialog] = useState(false);
 
   const { data: test, isLoading, error } = useQuery({
-    queryKey: ['test-result', testId],
+    queryKey: ['test-result', testId, user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tests')
@@ -50,7 +52,9 @@ const Results: React.FC = () => {
       if (error) throw error;
       return data as Test | null;
     },
-    enabled: !!testId,
+    enabled: !!testId && !authLoading && !!user,
+    retry: 2,
+    staleTime: 0,
   });
 
   const getSeverityConfig = (severity: SeverityLevel | null) => {
@@ -294,13 +298,34 @@ const Results: React.FC = () => {
     doc.save(fileName);
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <DashboardLayout>
         <div className="max-w-3xl mx-auto space-y-6">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-3xl mx-auto">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <ShieldCheck className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+              <p className="text-muted-foreground mb-6">
+                Please sign in to view this screening result.
+              </p>
+              <Button onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );

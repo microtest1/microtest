@@ -11,8 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { analyzeSample } from "@/lib/analyzeSample";
 import { FileUp, Upload, X, Loader2, Microscope, Camera } from "lucide-react";
 import type { TestType } from "@/types/database";
 
@@ -112,17 +112,10 @@ const NewTest = () => {
     setIsSubmitting(true);
 
     try {
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke("analyze-sample", {
-        body: {
-          testType,
-          imageData: preview,
-        },
+      const analysisResult = await analyzeSample({
+        testType,
+        imageData: preview,
       });
-
-      if (analysisError) {
-        console.error("Analysis error:", analysisError);
-        throw new Error(analysisError.message || "Analysis failed");
-      }
 
       const testId = analysisResult?.testId;
 
