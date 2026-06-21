@@ -103,7 +103,7 @@ export function useOfflineSync() {
   }, []);
 
   // Sync a single pending test
-  const syncTest = useCallback(async (pendingTest: PendingTest, userId: string): Promise<boolean> => {
+  const syncTest = useCallback(async (pendingTest: PendingTest, _userId: string): Promise<boolean> => {
     try {
       const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
         body: {
