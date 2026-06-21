@@ -36,7 +36,6 @@ interface PDFCustomizationData {
 }
 
 const SYSTEM_VERSION = 'Microtest v1.2';
-const AI_ENGINE = 'Microtest Screening Engine • Gemini 3 Vision';
 
 // ---------- Derivations ----------
 
@@ -409,7 +408,6 @@ const Results: React.FC = () => {
 
     const meta: Array<[string, string]> = [
       ['System Version', SYSTEM_VERSION],
-      ['AI Engine', AI_ENGINE],
       [
         'Detected Regions',
         Array.isArray(test.detected_regions) ? String(test.detected_regions.length) : '0',
@@ -758,7 +756,6 @@ const Results: React.FC = () => {
                   value={test.verification_code || '—'}
                 />
                 <StatRow label="System" value={SYSTEM_VERSION} />
-                <StatRow label="AI Engine" value="Gemini 3 Vision" />
                 <StatRow
                   label="Generated"
                   value={format(new Date(test.created_at), 'yyyy-MM-dd HH:mm')}
