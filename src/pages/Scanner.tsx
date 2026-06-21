@@ -207,35 +207,21 @@ const Scanner: React.FC = () => {
     setIsAnalyzing(true);
 
     try {
-      const { data: test, error: testError } = await supabase
-        .from('tests')
-        .insert({
-          user_id: user.id,
-          test_type: 'malaria',
-          status: 'processing',
-        })
-        .select()
-        .single();
-
-      if (testError) {
-        throw new Error('Failed to create test record');
-      }
-
-      const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
+      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-sample', {
         body: {
-          testId: test.id,
           testType: 'malaria',
           imageData: capturedImage,
         },
       });
 
       if (analysisError) {
-        await supabase
-          .from('tests')
-          .update({ status: 'failed' })
-          .eq('id', test.id);
-        
         throw new Error(analysisError.message || 'Analysis failed');
+      }
+
+      const testId = analysisResult?.testId;
+
+      if (!testId) {
+        throw new Error('Analysis completed but no result record was returned. Please try again.');
       }
 
       toast({
@@ -243,7 +229,7 @@ const Scanner: React.FC = () => {
         description: 'Your screening results are ready.',
       });
 
-      navigate(`/results/${test.id}`);
+      navigate(`/results/${testId}`);
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
