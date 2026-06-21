@@ -1,14 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Clean medical aesthetic - soft neutrals */
-    --background: 210 25% 98%;
-    --foreground: 210 40% 12%;
+    /* Midnight Indigo — premium dark medical aesthetic */
+    --background: 240 40% 4%;
+    --foreground: 230 30% 96%;
 
     --card: 0 0% 100%;
     --card-foreground: 210 40% 12%;
