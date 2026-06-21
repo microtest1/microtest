@@ -521,6 +521,7 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
 
     return new Response(JSON.stringify({ 
       success: true, 
+      testId,
       analysis: {
         detected: analysis.detected,
         severity: analysis.severity,
