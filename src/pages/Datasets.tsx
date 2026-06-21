@@ -199,11 +199,7 @@ const Datasets: React.FC = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-                        {dataset.test_type === 'malaria' ? (
-                          <Microscope className="h-16 w-16 text-muted-foreground/40" />
-                        ) : (
-                          <Baby className="h-16 w-16 text-muted-foreground/40" />
-                        )}
+                        <Microscope className="h-16 w-16 text-muted-foreground/40" />
                       </div>
                     )}
                     
@@ -215,11 +211,7 @@ const Datasets: React.FC = () => {
                           : 'bg-primary/90'
                       } text-white`}
                     >
-                      {dataset.test_type === 'malaria' ? (
-                        <><Microscope className="h-3 w-3 mr-1" /> Malaria</>
-                      ) : (
-                        <><Baby className="h-3 w-3 mr-1" /> Pregnancy</>
-                      )}
+                      <><Microscope className="h-3 w-3 mr-1" /> Malaria</>
                     </Badge>
                     
                     {/* Classification Badge */}
@@ -288,11 +280,7 @@ const Datasets: React.FC = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {selectedDataset.test_type === 'malaria' ? (
-                    <Microscope className="h-5 w-5 text-destructive" />
-                  ) : (
-                    <Baby className="h-5 w-5 text-primary" />
-                  )}
+                  <Microscope className="h-5 w-5 text-destructive" />
                   {selectedDataset.name}
                 </DialogTitle>
                 <DialogDescription>
