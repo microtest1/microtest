@@ -133,7 +133,7 @@ const Index = () => {
 
           {/* Right: device / microscope visual */}
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <div className="relative aspect-[9/16] w-full max-w-[420px] mx-auto">
+            <div className="relative aspect-[9/17] w-full max-w-[360px] sm:max-w-[400px] mx-auto">
               {/* Floating glow */}
               <div aria-hidden className="absolute -inset-10 rounded-[3rem] bg-gradient-to-br from-primary/40 via-[hsl(258_90%_60%/.3)] to-transparent blur-3xl animate-glow-pulse" />
 
