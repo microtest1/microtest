@@ -20,7 +20,8 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
   if (requestOrigin && (
     requestOrigin.includes(".lovableproject.com") ||
     requestOrigin.includes(".lovable.app") ||
-    requestOrigin.includes("-preview--")
+    requestOrigin.includes("-preview--") ||
+    requestOrigin.includes("micro-test.online")
   )) {
     return requestOrigin;
   }
