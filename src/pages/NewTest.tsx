@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { analyzeSample } from "@/lib/analyzeSample";
 import { FileUp, Upload, X, Loader2, Microscope, Camera } from "lucide-react";
