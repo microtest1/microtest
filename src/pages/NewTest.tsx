@@ -22,7 +22,7 @@ const NewTest = () => {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [testType, setTestType] = useState<TestType | "">("");
+  const [testType, setTestType] = useState<TestType>("malaria");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,26 +112,8 @@ const NewTest = () => {
     setIsSubmitting(true);
 
     try {
-      // Create test record
-      const { data: test, error: testError } = await supabase
-        .from("tests")
-        .insert({
-          user_id: user.id,
-          test_type: testType,
-          status: "processing",
-        })
-        .select()
-        .single();
-
-      if (testError) {
-        console.error("Test creation error:", testError);
-        throw new Error("Failed to create test record");
-      }
-
-      // Call AI analysis edge function
       const { data: analysisResult, error: analysisError } = await supabase.functions.invoke("analyze-sample", {
         body: {
-          testId: test.id,
           testType,
           imageData: preview,
         },
@@ -139,13 +121,13 @@ const NewTest = () => {
 
       if (analysisError) {
         console.error("Analysis error:", analysisError);
-        // Update test status to failed
-        await supabase
-          .from("tests")
-          .update({ status: "failed" })
-          .eq("id", test.id);
-
         throw new Error(analysisError.message || "Analysis failed");
+      }
+
+      const testId = analysisResult?.testId;
+
+      if (!testId) {
+        throw new Error("Analysis completed but no result record was returned. Please try again.");
       }
 
       toast({
@@ -153,7 +135,7 @@ const NewTest = () => {
         description: "Your test results are ready to view.",
       });
 
-      navigate(`/results/${test.id}`);
+      navigate(`/results/${testId}`);
     } catch (error) {
       console.error("Submit error:", error);
       toast({
@@ -210,12 +192,6 @@ const NewTest = () => {
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-destructive" />
                         Malaria Test (Blood Smear)
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="pregnancy">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-primary" />
-                        Pregnancy Test (HCG Strip)
                       </div>
                     </SelectItem>
                   </SelectContent>

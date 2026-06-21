@@ -103,38 +103,16 @@ export function useOfflineSync() {
   }, []);
 
   // Sync a single pending test
-  const syncTest = useCallback(async (pendingTest: PendingTest, userId: string): Promise<boolean> => {
+  const syncTest = useCallback(async (pendingTest: PendingTest, _userId: string): Promise<boolean> => {
     try {
-      // Create test record
-      const { data: test, error: testError } = await supabase
-        .from('tests')
-        .insert({
-          user_id: userId,
-          test_type: 'malaria',
-          status: 'processing',
-        })
-        .select()
-        .single();
-
-      if (testError) {
-        throw testError;
-      }
-
-      // Call AI analysis
       const { error: analysisError } = await supabase.functions.invoke('analyze-sample', {
         body: {
-          testId: test.id,
           testType: 'malaria',
           imageData: pendingTest.imageData,
         },
       });
 
       if (analysisError) {
-        // Update test status to failed
-        await supabase
-          .from('tests')
-          .update({ status: 'failed' })
-          .eq('id', test.id);
         throw analysisError;
       }
 

@@ -42,7 +42,7 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
 
 const getCorsHeaders = (origin: string) => ({
   "Access-Control-Allow-Origin": origin,
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 });
 
@@ -91,6 +91,8 @@ serve(async (req) => {
     );
   }
 
+  let activeTestId: string | null = null;
+
   try {
     // Step 1: Verify authentication
     const authHeader = req.headers.get('Authorization');
@@ -135,16 +137,7 @@ serve(async (req) => {
       );
     }
 
-    const { testId, testType, imageData } = requestBody;
-
-    // Validate testId
-    if (!testId || typeof testId !== 'string' || !isValidUUID(testId)) {
-      console.error("Invalid testId format:", testId);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request: testId must be a valid UUID' }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { testId: incomingTestId, testType, imageData } = requestBody;
 
     // Validate testType - only malaria is supported
     if (!testType || typeof testType !== 'string' || !isValidTestType(testType)) {
@@ -164,20 +157,63 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Verify test ownership
-    const { data: test, error: testError } = await supabaseClient
-      .from('tests')
-      .select('user_id, id, status')
-      .eq('id', testId)
-      .single();
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (testError || !test) {
-      console.error("Test not found:", testId, testError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Test not found' }), 
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let testId: string;
+    let test: { id: string; user_id: string; status: string | null } | null = null;
+
+    if (incomingTestId !== undefined && incomingTestId !== null) {
+      if (typeof incomingTestId !== 'string' || !isValidUUID(incomingTestId)) {
+        console.error("Invalid testId format:", incomingTestId);
+        return new Response(
+          JSON.stringify({ error: 'Invalid request: testId must be a valid UUID' }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      testId = incomingTestId;
+
+      // Step 3a: Verify existing test ownership
+      const { data: existingTest, error: testError } = await supabaseClient
+        .from('tests')
+        .select('user_id, id, status')
+        .eq('id', testId)
+        .single();
+
+      if (testError || !existingTest) {
+        console.error("Test not found:", testId, testError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Test not found' }), 
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      test = existingTest;
+    } else {
+      // Step 3b: Create the screening record inside the trusted backend boundary.
+      const { data: createdTest, error: createError } = await supabaseAdmin
+        .from('tests')
+        .insert({
+          user_id: user.id,
+          test_type: 'malaria',
+          status: 'processing',
+        })
+        .select('user_id, id, status')
+        .single();
+
+      if (createError || !createdTest) {
+        console.error("Failed to create screening record:", createError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create screening record. Please try again.' }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      test = createdTest;
+      testId = createdTest.id;
     }
+
+    activeTestId = testId;
 
     if (test.user_id !== user.id) {
       console.error(`Authorization failed: User ${user.id} attempted to access test owned by ${test.user_id}`);
@@ -190,8 +226,6 @@ serve(async (req) => {
     console.log(`Analyzing malaria test: ${testId} for user: ${user.id}`);
 
     // Step 4: Fetch reference datasets for comparison
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
     const { data: referenceDatasets, error: datasetError } = await supabaseAdmin
       .from('datasets')
       .select('name, description, classification, metadata')
@@ -246,7 +280,7 @@ WHO TREATMENT GUIDELINES (2023):
 - For severe malaria: IV artesunate (2.4 mg/kg at 0, 12, 24 hours) followed by oral ACT
 - For P. vivax/ovale: Chloroquine + primaquine for radical cure (check G6PD status)
 - For P. malariae/knowlesi: Chloroquine or ACT
-- Special considerations for pregnant women, children under 5, and immunocompromised
+- Special considerations for children under 5 and immunocompromised patients
 ${datasetContext}`;
 
     // Step 6: Call AI for analysis
@@ -255,7 +289,7 @@ ${datasetContext}`;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Lovable-API-Key": LOVABLE_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -491,6 +525,7 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
 
     return new Response(JSON.stringify({ 
       success: true, 
+      testId,
       analysis: {
         detected: analysis.detected,
         severity: analysis.severity,
@@ -507,6 +542,19 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    if (activeTestId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+      if (supabaseUrl && supabaseServiceKey) {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+        await supabaseAdmin
+          .from('tests')
+          .update({ status: 'failed' })
+          .eq('id', activeTestId);
+      }
+    }
+
     // Generate a unique request ID for support tracking
     const requestId = crypto.randomUUID().split('-')[0];
     

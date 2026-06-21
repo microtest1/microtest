@@ -12,7 +12,6 @@ import {
   Database, 
   Search, 
   Microscope, 
-  Baby, 
   ExternalLink,
   AlertCircle,
   CheckCircle,
@@ -32,7 +31,7 @@ interface Dataset {
   id: string;
   name: string;
   description: string | null;
-  test_type: 'malaria' | 'pregnancy';
+  test_type: 'malaria';
   classification: string | null;
   image_url: string | null;
   created_at: string;
@@ -40,7 +39,7 @@ interface Dataset {
 }
 
 const Datasets: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'all' | 'malaria' | 'pregnancy'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'malaria'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
 
@@ -92,8 +91,6 @@ const Datasets: React.FC = () => {
   };
 
   const malariaCount = datasets?.filter(d => d.test_type === 'malaria').length || 0;
-  const pregnancyCount = datasets?.filter(d => d.test_type === 'pregnancy').length || 0;
-
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
@@ -112,9 +109,6 @@ const Datasets: React.FC = () => {
             <span className="px-3 py-1.5 rounded-full bg-destructive/10 text-destructive">
               {malariaCount} Malaria
             </span>
-            <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary">
-              {pregnancyCount} Pregnancy
-            </span>
           </div>
         </div>
 
@@ -132,7 +126,7 @@ const Datasets: React.FC = () => {
                 />
               </div>
               <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="all" className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     All
@@ -140,10 +134,6 @@ const Datasets: React.FC = () => {
                   <TabsTrigger value="malaria" className="flex items-center gap-2">
                     <Microscope className="h-4 w-4" />
                     Malaria
-                  </TabsTrigger>
-                  <TabsTrigger value="pregnancy" className="flex items-center gap-2">
-                    <Baby className="h-4 w-4" />
-                    Pregnancy
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -209,11 +199,7 @@ const Datasets: React.FC = () => {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10">
-                        {dataset.test_type === 'malaria' ? (
-                          <Microscope className="h-16 w-16 text-muted-foreground/40" />
-                        ) : (
-                          <Baby className="h-16 w-16 text-muted-foreground/40" />
-                        )}
+                        <Microscope className="h-16 w-16 text-muted-foreground/40" />
                       </div>
                     )}
                     
@@ -225,11 +211,7 @@ const Datasets: React.FC = () => {
                           : 'bg-primary/90'
                       } text-white`}
                     >
-                      {dataset.test_type === 'malaria' ? (
-                        <><Microscope className="h-3 w-3 mr-1" /> Malaria</>
-                      ) : (
-                        <><Baby className="h-3 w-3 mr-1" /> Pregnancy</>
-                      )}
+                      <><Microscope className="h-3 w-3 mr-1" /> Malaria</>
                     </Badge>
                     
                     {/* Classification Badge */}
@@ -282,7 +264,7 @@ const Datasets: React.FC = () => {
               <li>High-quality reference images for each test type</li>
               <li>Classification labels (negative, mild, moderate, severe)</li>
               <li>Detailed descriptions of what to look for</li>
-              <li>Metadata about parasite stages, HCG levels, etc.</li>
+              <li>Metadata about parasite stages, image quality, and smear characteristics</li>
             </ul>
             <p className="text-xs italic pt-2">
               Note: These are educational references only. Always consult a healthcare professional for diagnosis.
@@ -298,11 +280,7 @@ const Datasets: React.FC = () => {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  {selectedDataset.test_type === 'malaria' ? (
-                    <Microscope className="h-5 w-5 text-destructive" />
-                  ) : (
-                    <Baby className="h-5 w-5 text-primary" />
-                  )}
+                  <Microscope className="h-5 w-5 text-destructive" />
                   {selectedDataset.name}
                 </DialogTitle>
                 <DialogDescription>
