@@ -29,7 +29,7 @@ export function useRealtimeDetection(
   
   const [detection, setDetection] = useState<DetectionResult | null>(null);
   const [isDetecting, setIsDetecting] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const captureFrame = useCallback((): string | null => {
