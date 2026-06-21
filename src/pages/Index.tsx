@@ -215,22 +215,27 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Floating chip */}
-              <div className="absolute -left-6 top-12 hidden rounded-2xl border border-white/10 bg-background/80 px-4 py-3 backdrop-blur-xl shadow-xl animate-float sm:block">
+              {/* Floating chip — top left */}
+              <div className="absolute -left-4 top-24 z-10 hidden rounded-2xl border border-white/10 bg-background/85 px-3.5 py-2.5 backdrop-blur-xl shadow-xl animate-float lg:flex xl:-left-10">
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-4 w-4 text-secondary" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/15 ring-1 ring-secondary/30">
+                    <Sparkles className="h-4 w-4 text-secondary" />
+                  </div>
                   <div>
-                    <div className="text-xs font-semibold">AI online</div>
-                    <div className="text-[10px] text-muted-foreground">Lovable Gateway · v3.2</div>
+                    <div className="text-xs font-semibold leading-tight">AI online</div>
+                    <div className="text-[10px] leading-tight text-muted-foreground">Lovable Gateway · v3.2</div>
                   </div>
                 </div>
               </div>
-              <div className="absolute -right-4 bottom-20 hidden rounded-2xl border border-white/10 bg-background/80 px-4 py-3 backdrop-blur-xl shadow-xl animate-float sm:block" style={{ animationDelay: "1.2s" }}>
+              {/* Floating chip — bottom right */}
+              <div className="absolute -right-4 bottom-28 z-10 hidden rounded-2xl border border-white/10 bg-background/85 px-3.5 py-2.5 backdrop-blur-xl shadow-xl animate-float lg:flex xl:-right-10" style={{ animationDelay: "1.2s" }}>
                 <div className="flex items-center gap-2.5">
-                  <Shield className="h-4 w-4 text-primary" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
                   <div>
-                    <div className="text-xs font-semibold">End-to-end encrypted</div>
-                    <div className="text-[10px] text-muted-foreground">HIPAA · GDPR ready</div>
+                    <div className="text-xs font-semibold leading-tight">End-to-end encrypted</div>
+                    <div className="text-[10px] leading-tight text-muted-foreground">HIPAA · GDPR ready</div>
                   </div>
                 </div>
               </div>
