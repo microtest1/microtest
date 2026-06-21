@@ -43,8 +43,8 @@ export interface Test {
   image_quality: ImageQuality | null;
   risk_level: RiskLevel | null;
   parasite_count: number | null;
-  detected_regions: DetectedRegion[] | null;
-  quality_issues: string[] | null;
+  detected_regions: DetectedRegion[] | unknown;
+  quality_issues: string[] | unknown;
   created_at: string;
   updated_at: string;
 }
