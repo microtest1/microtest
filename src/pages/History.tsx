@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Activity, CheckCircle2, Clock, ChevronRight, Microscope, AlertTriangle } from 'lucide-react';
+import { Activity, CheckCircle2, Clock, ChevronRight, Microscope, AlertTriangle, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts';
 import type { Test, SeverityLevel } from '@/types/database';
 
 const History: React.FC = () => {
