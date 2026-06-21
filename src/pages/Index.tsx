@@ -66,9 +66,15 @@ const Index = () => {
             <a href="#about" className="text-sm text-muted-foreground transition-colors hover:text-foreground">About</a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link to="/auth"><Button variant="ghost" size="sm">Sign In</Button></Link>
-            <Link to="/auth?mode=signup"><Button size="sm" className="btn-primary !px-4 !py-2 text-sm">Get Started<ArrowRight className="ml-1.5 h-4 w-4" /></Button></Link>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link to="/auth" className="hidden xs:block sm:block"><Button variant="ghost" size="sm" className="text-sm">Sign In</Button></Link>
+            <Link to="/auth?mode=signup">
+              <button className="btn-primary !px-3.5 !py-2 text-xs sm:text-sm sm:!px-4">
+                <span className="hidden sm:inline">Get Started</span>
+                <span className="sm:hidden">Start</span>
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </button>
+            </Link>
           </div>
         </div>
       </nav>
@@ -86,10 +92,9 @@ const Index = () => {
               <span className="text-xs font-medium tracking-wide text-foreground/90">AI-assisted screening · WHO-aligned</span>
             </div>
 
-            <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.25rem] animate-fade-in-up">
-              <span className="text-gradient">Detect malaria</span>
-              <br />
-              <span className="text-foreground/95">in under a </span>
+            <h1 className="font-display text-[2.5rem] font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.25rem] animate-fade-in-up text-balance">
+              <span className="text-gradient">Detect malaria</span>{" "}
+              <span className="text-foreground/95">in under a</span>{" "}
               <span className="text-gradient-primary">minute.</span>
             </h1>
 
@@ -117,9 +122,9 @@ const Index = () => {
                 { k: "94%+", v: "Sensitivity*" },
                 { k: "Offline", v: "Field-ready" },
               ].map((s) => (
-                <div key={s.v} className="bg-background/40 px-4 py-4 text-center">
-                  <div className="font-display text-2xl font-bold text-gradient-primary">{s.k}</div>
-                  <div className="mt-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">{s.v}</div>
+                <div key={s.v} className="bg-background/40 px-2 py-4 text-center">
+                  <div className="font-display text-lg sm:text-2xl font-bold text-gradient-primary leading-none">{s.k}</div>
+                  <div className="mt-1.5 text-[10px] sm:text-[11px] uppercase tracking-wider text-muted-foreground">{s.v}</div>
                 </div>
               ))}
             </div>
@@ -128,7 +133,7 @@ const Index = () => {
 
           {/* Right: device / microscope visual */}
           <div className="relative mx-auto w-full max-w-md lg:max-w-none">
-            <div className="relative aspect-[9/16] w-full max-w-[420px] mx-auto">
+            <div className="relative aspect-[9/17] w-full max-w-[360px] sm:max-w-[400px] mx-auto">
               {/* Floating glow */}
               <div aria-hidden className="absolute -inset-10 rounded-[3rem] bg-gradient-to-br from-primary/40 via-[hsl(258_90%_60%/.3)] to-transparent blur-3xl animate-glow-pulse" />
 
@@ -169,7 +174,7 @@ const Index = () => {
 
                       {/* AI detection box */}
                       <div className="absolute left-[26%] top-[28%] h-16 w-16 rounded-md border-2 border-secondary shadow-[0_0_20px_hsl(172_75%_55%/.6)]">
-                        <span className="absolute -top-5 left-0 rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground">P. falciparum · 97%</span>
+                        <span className="absolute -top-5 left-0 whitespace-nowrap rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground shadow-[0_4px_12px_hsl(172_75%_45%/.5)]">P. falciparum · 97%</span>
                       </div>
                       <div className="absolute left-[60%] top-[50%] h-12 w-12 rounded-md border-2 border-primary/80 shadow-[0_0_18px_hsl(245_85%_64%/.55)]" />
 
@@ -210,22 +215,27 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Floating chip */}
-              <div className="absolute -left-6 top-12 hidden rounded-2xl border border-white/10 bg-background/80 px-4 py-3 backdrop-blur-xl shadow-xl animate-float sm:block">
+              {/* Floating chip — top left */}
+              <div className="absolute -left-4 top-24 z-10 hidden rounded-2xl border border-white/10 bg-background/85 px-3.5 py-2.5 backdrop-blur-xl shadow-xl animate-float lg:flex xl:-left-10">
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-4 w-4 text-secondary" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/15 ring-1 ring-secondary/30">
+                    <Sparkles className="h-4 w-4 text-secondary" />
+                  </div>
                   <div>
-                    <div className="text-xs font-semibold">AI online</div>
-                    <div className="text-[10px] text-muted-foreground">Lovable Gateway · v3.2</div>
+                    <div className="text-xs font-semibold leading-tight">AI online</div>
+                    <div className="text-[10px] leading-tight text-muted-foreground">Lovable Gateway · v3.2</div>
                   </div>
                 </div>
               </div>
-              <div className="absolute -right-4 bottom-20 hidden rounded-2xl border border-white/10 bg-background/80 px-4 py-3 backdrop-blur-xl shadow-xl animate-float sm:block" style={{ animationDelay: "1.2s" }}>
+              {/* Floating chip — bottom right */}
+              <div className="absolute -right-4 bottom-28 z-10 hidden rounded-2xl border border-white/10 bg-background/85 px-3.5 py-2.5 backdrop-blur-xl shadow-xl animate-float lg:flex xl:-right-10" style={{ animationDelay: "1.2s" }}>
                 <div className="flex items-center gap-2.5">
-                  <Shield className="h-4 w-4 text-primary" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 ring-1 ring-primary/30">
+                    <Shield className="h-4 w-4 text-primary" />
+                  </div>
                   <div>
-                    <div className="text-xs font-semibold">End-to-end encrypted</div>
-                    <div className="text-[10px] text-muted-foreground">HIPAA · GDPR ready</div>
+                    <div className="text-xs font-semibold leading-tight">End-to-end encrypted</div>
+                    <div className="text-[10px] leading-tight text-muted-foreground">HIPAA · GDPR ready</div>
                   </div>
                 </div>
               </div>
