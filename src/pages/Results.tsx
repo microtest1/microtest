@@ -298,13 +298,34 @@ const Results: React.FC = () => {
     doc.save(fileName);
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <DashboardLayout>
         <div className="max-w-3xl mx-auto space-y-6">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-32 w-full rounded-xl" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-3xl mx-auto">
+          <Card>
+            <CardContent className="p-12 text-center">
+              <ShieldCheck className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Sign In Required</h2>
+              <p className="text-muted-foreground mb-6">
+                Please sign in to view this screening result.
+              </p>
+              <Button onClick={() => navigate('/auth')}>
+                Sign In
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );
