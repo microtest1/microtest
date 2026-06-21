@@ -218,13 +218,17 @@ export type Database = {
           ai_findings: string | null
           confidence_score: number | null
           created_at: string
+          detected_regions: Json | null
           enhanced_image_url: string | null
           id: string
           image_quality: string | null
+          parasite_count: number | null
           parasite_density: string | null
           parasite_species: string | null
           parasite_stage: string | null
+          quality_issues: Json | null
           result_data: Json | null
+          risk_level: string | null
           sample_image_url: string | null
           severity: Database["public"]["Enums"]["severity_level"] | null
           status: string | null
@@ -238,13 +242,17 @@ export type Database = {
           ai_findings?: string | null
           confidence_score?: number | null
           created_at?: string
+          detected_regions?: Json | null
           enhanced_image_url?: string | null
           id?: string
           image_quality?: string | null
+          parasite_count?: number | null
           parasite_density?: string | null
           parasite_species?: string | null
           parasite_stage?: string | null
+          quality_issues?: Json | null
           result_data?: Json | null
+          risk_level?: string | null
           sample_image_url?: string | null
           severity?: Database["public"]["Enums"]["severity_level"] | null
           status?: string | null
@@ -258,13 +266,17 @@ export type Database = {
           ai_findings?: string | null
           confidence_score?: number | null
           created_at?: string
+          detected_regions?: Json | null
           enhanced_image_url?: string | null
           id?: string
           image_quality?: string | null
+          parasite_count?: number | null
           parasite_density?: string | null
           parasite_species?: string | null
           parasite_stage?: string | null
+          quality_issues?: Json | null
           result_data?: Json | null
+          risk_level?: string | null
           sample_image_url?: string | null
           severity?: Database["public"]["Enums"]["severity_level"] | null
           status?: string | null

@@ -259,7 +259,7 @@ ${datasetContext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -269,15 +269,17 @@ ${datasetContext}`;
                 type: "text", 
                 text: `Analyze this blood smear microscopy image for malaria parasites.
 
-IMPORTANT: 
-1. First detect and locate the blood sample in the image
-2. Examine for Plasmodium parasites at all life stages
-3. Identify species if possible
-4. Estimate parasite density
-5. Assess image quality for diagnostic purposes
-6. Provide WHO-compliant treatment recommendations if positive
+REQUIRED STEPS:
+1. Detect and locate the blood sample region in the image.
+2. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte).
+3. Identify species if possible.
+4. Estimate parasite density AND an approximate parasite_count (integer estimate of distinct parasite candidates visible — 0 if none).
+5. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1, where (0,0) is top-left). Limit to the 10 most confident regions.
+6. Assess image quality and list any quality_issues (e.g. "blurry", "underexposed", "no blood sample").
+7. Provide an overall risk_classification: "low", "medium", or "high".
+8. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
 
-Remember: This is a SCREENING tool. Results should be confirmed by laboratory microscopy.` 
+This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.` 
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -291,55 +293,42 @@ Remember: This is a SCREENING tool. Results should be confirmed by laboratory mi
             parameters: {
               type: "object",
               properties: {
-                liquid_detected: {
-                  type: "boolean",
-                  description: "Whether a blood sample was successfully detected in the image"
+                liquid_detected: { type: "boolean", description: "Whether a blood sample was detected" },
+                surface_type: { type: "string", description: "Surface/slide type" },
+                detected: { type: "boolean", description: "Whether malaria parasites were detected" },
+                severity: { type: "string", enum: ["negative", "mild", "moderate", "severe"] },
+                risk_classification: { type: "string", enum: ["low", "medium", "high"], description: "Overall clinical risk classification" },
+                confidence: { type: "number", description: "AI confidence score 0-100" },
+                findings: { type: "string", description: "Detailed clinical findings" },
+                recommendations: { type: "string", description: "WHO-aligned recommendations; never prescribe" },
+                parasite_species: { type: "string", description: "Identified Plasmodium species" },
+                parasite_density: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                parasite_stage: { type: "string", description: "Predominant parasite stage" },
+                parasite_count: { type: "integer", description: "Estimated parasite candidate count (0 if none)" },
+                image_quality: { type: "string", enum: ["excellent", "good", "fair", "poor"] },
+                quality_issues: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "List of quality problems detected (empty if none)"
                 },
-                surface_type: {
-                  type: "string",
-                  description: "The type of surface/slide the sample is on (glass slide, white background, etc.)"
-                },
-                detected: { 
-                  type: "boolean", 
-                  description: "Whether malaria parasites were detected" 
-                },
-                severity: { 
-                  type: "string", 
-                  enum: ["negative", "mild", "moderate", "severe"], 
-                  description: "Severity level of malaria infection" 
-                },
-                confidence: { 
-                  type: "number", 
-                  description: "AI confidence score from 0-100 based on image quality and certainty" 
-                },
-                findings: { 
-                  type: "string", 
-                  description: "Detailed clinical findings including observations about parasites, red blood cells, and any notable characteristics" 
-                },
-                recommendations: { 
-                  type: "string", 
-                  description: "WHO-based treatment recommendations tailored to the specific findings" 
-                },
-                parasite_species: {
-                  type: "string",
-                  description: "Identified Plasmodium species (P. falciparum, P. vivax, P. ovale, P. malariae, P. knowlesi, mixed, or unknown)"
-                },
-                parasite_density: {
-                  type: "string",
-                  enum: ["low", "medium", "high", "critical"],
-                  description: "Estimated parasite density level"
-                },
-                parasite_stage: {
-                  type: "string",
-                  description: "Predominant parasite stage observed (ring, trophozoite, schizont, gametocyte, or multiple)"
-                },
-                image_quality: {
-                  type: "string",
-                  enum: ["excellent", "good", "fair", "poor"],
-                  description: "Assessment of the submitted image quality for diagnostic purposes"
+                detected_regions: {
+                  type: "array",
+                  description: "Up to 10 most confident parasite candidate regions with normalized bounding boxes (0-1)",
+                  items: {
+                    type: "object",
+                    properties: {
+                      x: { type: "number" },
+                      y: { type: "number" },
+                      width: { type: "number" },
+                      height: { type: "number" },
+                      label: { type: "string" },
+                      confidence: { type: "number" }
+                    },
+                    required: ["x", "y", "width", "height"]
+                  }
                 }
               },
-              required: ["liquid_detected", "surface_type", "detected", "severity", "confidence", "findings", "recommendations", "image_quality"]
+              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "parasite_count", "detected_regions"]
             }
           }
         }],
@@ -442,7 +431,35 @@ Remember: This is a SCREENING tool. Results should be confirmed by laboratory mi
       resultData.parasite_density = analysis.parasite_density || null;
     }
 
-    // Step 10: Update test in database with new malaria-specific columns
+    // Sanitize detected_regions: clamp to [0,1], cap to 10
+    const rawRegions = Array.isArray(analysis.detected_regions) ? analysis.detected_regions : [];
+    const detectedRegions = rawRegions.slice(0, 10).map((r: Record<string, unknown>) => ({
+      x: Math.max(0, Math.min(1, Number(r.x) || 0)),
+      y: Math.max(0, Math.min(1, Number(r.y) || 0)),
+      width: Math.max(0, Math.min(1, Number(r.width) || 0)),
+      height: Math.max(0, Math.min(1, Number(r.height) || 0)),
+      label: typeof r.label === 'string' ? r.label.slice(0, 60) : 'parasite candidate',
+      confidence: Math.max(0, Math.min(100, Number(r.confidence) || 0)),
+    }));
+
+    const qualityIssues = Array.isArray(analysis.quality_issues)
+      ? analysis.quality_issues.slice(0, 10).map((q: unknown) => String(q).slice(0, 100))
+      : [];
+
+    const riskLevel: 'low' | 'medium' | 'high' =
+      ['low', 'medium', 'high'].includes(analysis.risk_classification)
+        ? analysis.risk_classification
+        : (analysis.severity === 'severe' || analysis.severity === 'moderate' ? 'high'
+          : analysis.severity === 'mild' ? 'medium' : 'low');
+
+    const parasiteCount = Math.max(0, Math.min(10000, Number(analysis.parasite_count) || 0));
+
+    resultData.risk_level = riskLevel;
+    resultData.parasite_count = parasiteCount;
+    resultData.detected_regions = detectedRegions;
+    resultData.quality_issues = qualityIssues;
+
+    // Step 10: Update test in database
     const { error: updateError } = await supabaseAdmin
       .from('tests')
       .update({
@@ -456,7 +473,11 @@ Remember: This is a SCREENING tool. Results should be confirmed by laboratory mi
         parasite_species: analysis.detected ? (analysis.parasite_species || null) : null,
         parasite_density: analysis.detected ? (analysis.parasite_density || null) : null,
         parasite_stage: analysis.detected ? (analysis.parasite_stage || null) : null,
-        image_quality: analysis.image_quality || null
+        image_quality: analysis.image_quality || null,
+        risk_level: riskLevel,
+        parasite_count: parasiteCount,
+        detected_regions: detectedRegions,
+        quality_issues: qualityIssues,
       })
       .eq('id', testId)
       .eq('user_id', user.id);
@@ -466,17 +487,21 @@ Remember: This is a SCREENING tool. Results should be confirmed by laboratory mi
       throw new Error("Failed to save analysis results");
     }
 
-    console.log(`Malaria analysis complete for test ${testId} - Severity: ${analysis.severity}, Confidence: ${analysis.confidence}%, Species: ${analysis.parasite_species || 'N/A'}`);
+    console.log(`Malaria analysis complete: ${testId} severity=${analysis.severity} risk=${riskLevel} count=${parasiteCount} conf=${analysis.confidence}%`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       analysis: {
         detected: analysis.detected,
         severity: analysis.severity,
+        risk_level: riskLevel,
         confidence: analysis.confidence,
         image_quality: analysis.image_quality,
         parasite_species: analysis.parasite_species,
-        parasite_density: analysis.parasite_density
+        parasite_density: analysis.parasite_density,
+        parasite_count: parasiteCount,
+        detected_regions: detectedRegions,
+        quality_issues: qualityIssues,
       }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -41,8 +41,23 @@ export interface Test {
   parasite_density: ParasiteDensity | null;
   parasite_stage: string | null;
   image_quality: ImageQuality | null;
+  risk_level: RiskLevel | null;
+  parasite_count: number | null;
+  detected_regions: DetectedRegion[] | unknown;
+  quality_issues: string[] | unknown;
   created_at: string;
   updated_at: string;
+}
+
+export type RiskLevel = 'low' | 'medium' | 'high';
+
+export interface DetectedRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label?: string;
+  confidence?: number;
 }
 
 export interface Subscription {
