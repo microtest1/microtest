@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { analyzeSample } from '@/lib/analyzeSample';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PendingTest {
   id: string;
