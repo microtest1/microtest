@@ -25,7 +25,8 @@ import {
   MapPin,
   RotateCcw
 } from 'lucide-react';
-import type { Test, SeverityLevel } from '@/types/database';
+import type { Test, SeverityLevel, RiskLevel, DetectedRegion } from '@/types/database';
+import { DetectionOverlay } from '@/components/DetectionOverlay';
 
 interface PDFCustomizationData {
   hospitalName: string;
