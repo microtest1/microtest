@@ -264,7 +264,7 @@ const Datasets: React.FC = () => {
               <li>High-quality reference images for each test type</li>
               <li>Classification labels (negative, mild, moderate, severe)</li>
               <li>Detailed descriptions of what to look for</li>
-              <li>Metadata about parasite stages, HCG levels, etc.</li>
+              <li>Metadata about parasite stages, image quality, and smear characteristics</li>
             </ul>
             <p className="text-xs italic pt-2">
               Note: These are educational references only. Always consult a healthcare professional for diagnosis.
