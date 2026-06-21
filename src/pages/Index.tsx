@@ -174,7 +174,7 @@ const Index = () => {
 
                       {/* AI detection box */}
                       <div className="absolute left-[26%] top-[28%] h-16 w-16 rounded-md border-2 border-secondary shadow-[0_0_20px_hsl(172_75%_55%/.6)]">
-                        <span className="absolute -top-5 left-0 rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground">P. falciparum · 97%</span>
+                        <span className="absolute -top-5 left-0 whitespace-nowrap rounded bg-secondary px-1.5 py-0.5 text-[9px] font-semibold text-secondary-foreground shadow-[0_4px_12px_hsl(172_75%_45%/.5)]">P. falciparum · 97%</span>
                       </div>
                       <div className="absolute left-[60%] top-[50%] h-12 w-12 rounded-md border-2 border-primary/80 shadow-[0_0_18px_hsl(245_85%_64%/.55)]" />
 
