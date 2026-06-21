@@ -92,10 +92,9 @@ const Index = () => {
               <span className="text-xs font-medium tracking-wide text-foreground/90">AI-assisted screening · WHO-aligned</span>
             </div>
 
-            <h1 className="font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.25rem] animate-fade-in-up">
-              <span className="text-gradient">Detect malaria</span>
-              <br />
-              <span className="text-foreground/95">in under a </span>
+            <h1 className="font-display text-[2.5rem] font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-[4.25rem] animate-fade-in-up text-balance">
+              <span className="text-gradient">Detect malaria</span>{" "}
+              <span className="text-foreground/95">in under a</span>{" "}
               <span className="text-gradient-primary">minute.</span>
             </h1>
 
