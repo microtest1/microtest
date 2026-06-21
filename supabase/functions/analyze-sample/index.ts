@@ -135,16 +135,7 @@ serve(async (req) => {
       );
     }
 
-    const { testId, testType, imageData } = requestBody;
-
-    // Validate testId
-    if (!testId || typeof testId !== 'string' || !isValidUUID(testId)) {
-      console.error("Invalid testId format:", testId);
-      return new Response(
-        JSON.stringify({ error: 'Invalid request: testId must be a valid UUID' }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { testId: incomingTestId, testType, imageData } = requestBody;
 
     // Validate testType - only malaria is supported
     if (!testType || typeof testType !== 'string' || !isValidTestType(testType)) {
@@ -164,19 +155,60 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Verify test ownership
-    const { data: test, error: testError } = await supabaseClient
-      .from('tests')
-      .select('user_id, id, status')
-      .eq('id', testId)
-      .single();
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (testError || !test) {
-      console.error("Test not found:", testId, testError?.message);
-      return new Response(
-        JSON.stringify({ error: 'Test not found' }), 
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    let testId: string;
+    let test: { id: string; user_id: string; status: string | null } | null = null;
+
+    if (incomingTestId !== undefined && incomingTestId !== null) {
+      if (typeof incomingTestId !== 'string' || !isValidUUID(incomingTestId)) {
+        console.error("Invalid testId format:", incomingTestId);
+        return new Response(
+          JSON.stringify({ error: 'Invalid request: testId must be a valid UUID' }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      testId = incomingTestId;
+
+      // Step 3a: Verify existing test ownership
+      const { data: existingTest, error: testError } = await supabaseClient
+        .from('tests')
+        .select('user_id, id, status')
+        .eq('id', testId)
+        .single();
+
+      if (testError || !existingTest) {
+        console.error("Test not found:", testId, testError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Test not found' }), 
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      test = existingTest;
+    } else {
+      // Step 3b: Create the screening record inside the trusted backend boundary.
+      const { data: createdTest, error: createError } = await supabaseAdmin
+        .from('tests')
+        .insert({
+          user_id: user.id,
+          test_type: 'malaria',
+          status: 'processing',
+        })
+        .select('user_id, id, status')
+        .single();
+
+      if (createError || !createdTest) {
+        console.error("Failed to create test record:", createError?.message);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create screening record. Please try again.' }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      test = createdTest;
+      testId = createdTest.id;
     }
 
     if (test.user_id !== user.id) {
@@ -190,8 +222,6 @@ serve(async (req) => {
     console.log(`Analyzing malaria test: ${testId} for user: ${user.id}`);
 
     // Step 4: Fetch reference datasets for comparison
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
     const { data: referenceDatasets, error: datasetError } = await supabaseAdmin
       .from('datasets')
       .select('name, description, classification, metadata')
