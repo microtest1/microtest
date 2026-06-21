@@ -259,7 +259,7 @@ ${datasetContext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -269,15 +269,17 @@ ${datasetContext}`;
                 type: "text", 
                 text: `Analyze this blood smear microscopy image for malaria parasites.
 
-IMPORTANT: 
-1. First detect and locate the blood sample in the image
-2. Examine for Plasmodium parasites at all life stages
-3. Identify species if possible
-4. Estimate parasite density
-5. Assess image quality for diagnostic purposes
-6. Provide WHO-compliant treatment recommendations if positive
+REQUIRED STEPS:
+1. Detect and locate the blood sample region in the image.
+2. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte).
+3. Identify species if possible.
+4. Estimate parasite density AND an approximate parasite_count (integer estimate of distinct parasite candidates visible — 0 if none).
+5. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1, where (0,0) is top-left). Limit to the 10 most confident regions.
+6. Assess image quality and list any quality_issues (e.g. "blurry", "underexposed", "no blood sample").
+7. Provide an overall risk_classification: "low", "medium", or "high".
+8. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
 
-Remember: This is a SCREENING tool. Results should be confirmed by laboratory microscopy.` 
+This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.` 
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -291,55 +293,42 @@ Remember: This is a SCREENING tool. Results should be confirmed by laboratory mi
             parameters: {
               type: "object",
               properties: {
-                liquid_detected: {
-                  type: "boolean",
-                  description: "Whether a blood sample was successfully detected in the image"
+                liquid_detected: { type: "boolean", description: "Whether a blood sample was detected" },
+                surface_type: { type: "string", description: "Surface/slide type" },
+                detected: { type: "boolean", description: "Whether malaria parasites were detected" },
+                severity: { type: "string", enum: ["negative", "mild", "moderate", "severe"] },
+                risk_classification: { type: "string", enum: ["low", "medium", "high"], description: "Overall clinical risk classification" },
+                confidence: { type: "number", description: "AI confidence score 0-100" },
+                findings: { type: "string", description: "Detailed clinical findings" },
+                recommendations: { type: "string", description: "WHO-aligned recommendations; never prescribe" },
+                parasite_species: { type: "string", description: "Identified Plasmodium species" },
+                parasite_density: { type: "string", enum: ["low", "medium", "high", "critical"] },
+                parasite_stage: { type: "string", description: "Predominant parasite stage" },
+                parasite_count: { type: "integer", description: "Estimated parasite candidate count (0 if none)" },
+                image_quality: { type: "string", enum: ["excellent", "good", "fair", "poor"] },
+                quality_issues: {
+                  type: "array",
+                  items: { type: "string" },
+                  description: "List of quality problems detected (empty if none)"
                 },
-                surface_type: {
-                  type: "string",
-                  description: "The type of surface/slide the sample is on (glass slide, white background, etc.)"
-                },
-                detected: { 
-                  type: "boolean", 
-                  description: "Whether malaria parasites were detected" 
-                },
-                severity: { 
-                  type: "string", 
-                  enum: ["negative", "mild", "moderate", "severe"], 
-                  description: "Severity level of malaria infection" 
-                },
-                confidence: { 
-                  type: "number", 
-                  description: "AI confidence score from 0-100 based on image quality and certainty" 
-                },
-                findings: { 
-                  type: "string", 
-                  description: "Detailed clinical findings including observations about parasites, red blood cells, and any notable characteristics" 
-                },
-                recommendations: { 
-                  type: "string", 
-                  description: "WHO-based treatment recommendations tailored to the specific findings" 
-                },
-                parasite_species: {
-                  type: "string",
-                  description: "Identified Plasmodium species (P. falciparum, P. vivax, P. ovale, P. malariae, P. knowlesi, mixed, or unknown)"
-                },
-                parasite_density: {
-                  type: "string",
-                  enum: ["low", "medium", "high", "critical"],
-                  description: "Estimated parasite density level"
-                },
-                parasite_stage: {
-                  type: "string",
-                  description: "Predominant parasite stage observed (ring, trophozoite, schizont, gametocyte, or multiple)"
-                },
-                image_quality: {
-                  type: "string",
-                  enum: ["excellent", "good", "fair", "poor"],
-                  description: "Assessment of the submitted image quality for diagnostic purposes"
+                detected_regions: {
+                  type: "array",
+                  description: "Up to 10 most confident parasite candidate regions with normalized bounding boxes (0-1)",
+                  items: {
+                    type: "object",
+                    properties: {
+                      x: { type: "number" },
+                      y: { type: "number" },
+                      width: { type: "number" },
+                      height: { type: "number" },
+                      label: { type: "string" },
+                      confidence: { type: "number" }
+                    },
+                    required: ["x", "y", "width", "height"]
+                  }
                 }
               },
-              required: ["liquid_detected", "surface_type", "detected", "severity", "confidence", "findings", "recommendations", "image_quality"]
+              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "parasite_count", "detected_regions"]
             }
           }
         }],
