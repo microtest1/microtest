@@ -74,9 +74,113 @@ const History: React.FC = () => {
     return groups;
   }, {} as Record<string, Test[]>);
 
+  const trendData = useMemo(() => {
+    return [...tests]
+      .filter(t => t.status === 'completed' && typeof t.confidence_score === 'number')
+      .sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at))
+      .slice(-20)
+      .map(t => ({
+        date: format(new Date(t.created_at), 'MMM d'),
+        confidence: Math.round(Number(t.confidence_score) || 0),
+        positive: t.severity && t.severity !== 'negative' ? 1 : 0,
+      }));
+  }, [tests]);
+
+  const stats = useMemo(() => {
+    const total = tests.length;
+    const positive = tests.filter(t => t.severity && t.severity !== 'negative').length;
+    const negative = tests.filter(t => t.severity === 'negative').length;
+    const avgConf = tests.length
+      ? Math.round(
+          tests.reduce((s, t) => s + (Number(t.confidence_score) || 0), 0) /
+            Math.max(1, tests.filter(t => typeof t.confidence_score === 'number').length),
+        )
+      : 0;
+    return { total, positive, negative, avgConf };
+  }, [tests]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Activity className="h-5 w-5 text-primary" />
+            </div>
+            Screening History
+          </h1>
+          <p className="text-muted-foreground mt-1 ml-13">
+            View all your malaria screening results
+          </p>
+        </div>
+
+        {/* Stats + trend */}
+        {tests.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Total</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Detected</p>
+                <p className="text-2xl font-bold text-destructive mt-1">{stats.positive}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Not Detected</p>
+                <p className="text-2xl font-bold text-success mt-1">{stats.negative}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-5">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Confidence</p>
+                <p className="text-2xl font-bold text-foreground mt-1">{stats.avgConf}%</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {trendData.length >= 2 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-primary" />
+                Confidence Trend
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-48 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendData} margin={{ top: 8, right: 16, left: -10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                    <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                    <Tooltip
+                      contentStyle={{
+                        background: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: 8,
+                        fontSize: 12,
+                      }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="confidence"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div>
           <h1 className="text-2xl font-bold font-display text-foreground flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
