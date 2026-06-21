@@ -403,19 +403,89 @@ const Results: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Disclaimer Banner */}
-        <div className="p-4 rounded-lg bg-warning/10 border border-warning/20 flex items-start gap-3">
+        {/* Strong disclaimer banner */}
+        <div className="p-4 rounded-lg bg-warning/10 border-2 border-warning/30 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-foreground">AI-Assisted Screening Result</p>
-            <p className="text-sm text-muted-foreground">
-              This is a preliminary screening. Laboratory confirmation is recommended for all positive results.
+            <p className="text-sm font-bold text-foreground uppercase tracking-wide">
+              Screening only — not a medical diagnosis
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              This AI-assisted result must be confirmed by laboratory microscopy and a qualified clinician.
+              Microtest does not prescribe treatment or guarantee accuracy.
             </p>
           </div>
         </div>
 
+        {/* Sample image with AI detection overlay */}
+        {test.sample_image_url && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Microscope className="h-4 w-4 text-primary" />
+                AI Detection View
+                {Array.isArray(test.detected_regions) && test.detected_regions.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {(test.detected_regions as DetectedRegion[]).length} region(s)
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DetectionOverlay
+                imageUrl={test.sample_image_url}
+                regions={(test.detected_regions as DetectedRegion[]) || []}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Highlighted boxes indicate areas the AI identified as parasite candidates. Confirm with laboratory microscopy.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Details Grid */}
         <div className="grid md:grid-cols-2 gap-4">
+          {/* Risk Level */}
+          {test.risk_level && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    test.risk_level === 'high' ? 'bg-destructive/10' :
+                    test.risk_level === 'medium' ? 'bg-warning/10' : 'bg-success/10'
+                  }`}>
+                    <AlertTriangle className={`h-5 w-5 ${
+                      test.risk_level === 'high' ? 'text-destructive' :
+                      test.risk_level === 'medium' ? 'text-warning' : 'text-success'
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Risk Classification</p>
+                    <p className="font-semibold text-foreground capitalize">{test.risk_level} risk</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Parasite Count */}
+          {typeof test.parasite_count === 'number' && test.parasite_count > 0 && (
+            <Card>
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Candidates Identified</p>
+                    <p className="font-semibold text-foreground">{test.parasite_count}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+
           {/* Verification */}
           {test.verification_code && (
             <Card>
