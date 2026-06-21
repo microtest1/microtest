@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { analyzeSample } from '@/lib/analyzeSample';
 import { useImageEnhancement } from '@/hooks/useImageEnhancement';
 import { useRealtimeDetection } from '@/hooks/useRealtimeDetection';
 import { 
@@ -207,16 +208,10 @@ const Scanner: React.FC = () => {
     setIsAnalyzing(true);
 
     try {
-      const { data: analysisResult, error: analysisError } = await supabase.functions.invoke('analyze-sample', {
-        body: {
-          testType: 'malaria',
-          imageData: capturedImage,
-        },
+      const analysisResult = await analyzeSample({
+        testType: 'malaria',
+        imageData: capturedImage,
       });
-
-      if (analysisError) {
-        throw new Error(analysisError.message || 'Analysis failed');
-      }
 
       const testId = analysisResult?.testId;
 
