@@ -21,10 +21,11 @@ const getAllowedOrigin = (requestOrigin: string | null): string => {
     allowedOrigins.push(supabaseUrl);
   }
   
-  // Allow Lovable preview domains
+  // Allow Lovable preview domains and Microtest custom domains
   if (requestOrigin && (
     requestOrigin.includes(".lovableproject.com") ||
-    requestOrigin.includes(".lovable.app")
+    requestOrigin.includes(".lovable.app") ||
+    requestOrigin.includes("micro-test.online")
   )) {
     return requestOrigin;
   }
