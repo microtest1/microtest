@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PDFCustomizationDialog } from '@/components/PDFCustomizationDialog';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getScreeningResult } from '@/lib/screeningResult';
 import { format } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import { 
@@ -44,13 +44,8 @@ const Results: React.FC = () => {
   const { data: test, isLoading, error } = useQuery({
     queryKey: ['test-result', testId, user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('tests')
-        .select('*')
-        .eq('id', testId)
-        .maybeSingle();
-      if (error) throw error;
-      return data as Test | null;
+      if (!testId) throw new Error('Missing screening result id');
+      return getScreeningResult(testId);
     },
     enabled: !!testId && !authLoading && !!user,
     retry: 2,
