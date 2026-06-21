@@ -66,9 +66,15 @@ const Index = () => {
             <a href="#about" className="text-sm text-muted-foreground transition-colors hover:text-foreground">About</a>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link to="/auth"><Button variant="ghost" size="sm">Sign In</Button></Link>
-            <Link to="/auth?mode=signup"><Button size="sm" className="btn-primary !px-4 !py-2 text-sm">Get Started<ArrowRight className="ml-1.5 h-4 w-4" /></Button></Link>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link to="/auth" className="hidden xs:block sm:block"><Button variant="ghost" size="sm" className="text-sm">Sign In</Button></Link>
+            <Link to="/auth?mode=signup">
+              <button className="btn-primary !px-3.5 !py-2 text-xs sm:text-sm sm:!px-4">
+                <span className="hidden sm:inline">Get Started</span>
+                <span className="sm:hidden">Start</span>
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </button>
+            </Link>
           </div>
         </div>
       </nav>
