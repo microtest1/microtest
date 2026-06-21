@@ -19,8 +19,14 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
-        display: ["Plus Jakarta Sans", "Inter", "sans-serif"],
+        sans: ["Manrope", "system-ui", "-apple-system", "sans-serif"],
+        display: ["Sora", "Manrope", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "monospace"],
+      },
+      backgroundImage: {
+        "gradient-indigo": "linear-gradient(135deg, hsl(238 84% 60%) 0%, hsl(258 90% 66%) 100%)",
+        "gradient-aurora": "radial-gradient(ellipse at top, hsl(238 90% 35% / 0.55), transparent 60%), radial-gradient(ellipse at bottom right, hsl(258 90% 55% / 0.35), transparent 60%)",
+        "grid-faint": "linear-gradient(to right, hsl(238 60% 80% / 0.06) 1px, transparent 1px), linear-gradient(to bottom, hsl(238 60% 80% / 0.06) 1px, transparent 1px)",
       },
       colors: {
         border: "hsl(var(--border))",
