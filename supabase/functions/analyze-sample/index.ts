@@ -200,7 +200,7 @@ serve(async (req) => {
         .single();
 
       if (createError || !createdTest) {
-        console.error("Failed to create test record:", createError?.message);
+        console.error("Failed to create screening record:", createError?.message);
         return new Response(
           JSON.stringify({ error: 'Failed to create screening record. Please try again.' }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
