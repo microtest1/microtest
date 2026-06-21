@@ -181,7 +181,7 @@ const History: React.FC = () => {
           </Card>
         )}
 
-        </div>
+
 
         
         {isLoading ? (
