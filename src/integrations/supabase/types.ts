@@ -217,13 +217,18 @@ export type Database = {
         Row: {
           ai_findings: string | null
           confidence_score: number | null
+          counting_method: string | null
+          counting_notes: string | null
+          counting_status: string | null
           created_at: string
           detected_regions: Json | null
           enhanced_image_url: string | null
           id: string
           image_quality: string | null
+          image_quality_score: number | null
           parasite_count: number | null
           parasite_density: string | null
+          parasite_density_per_ul: number | null
           parasite_species: string | null
           parasite_stage: string | null
           quality_issues: Json | null
@@ -236,18 +241,25 @@ export type Database = {
           updated_at: string
           user_id: string
           verification_code: string | null
+          wbc_assumption: number
+          wbc_count: number | null
           who_recommendations: string | null
         }
         Insert: {
           ai_findings?: string | null
           confidence_score?: number | null
+          counting_method?: string | null
+          counting_notes?: string | null
+          counting_status?: string | null
           created_at?: string
           detected_regions?: Json | null
           enhanced_image_url?: string | null
           id?: string
           image_quality?: string | null
+          image_quality_score?: number | null
           parasite_count?: number | null
           parasite_density?: string | null
+          parasite_density_per_ul?: number | null
           parasite_species?: string | null
           parasite_stage?: string | null
           quality_issues?: Json | null
@@ -260,18 +272,25 @@ export type Database = {
           updated_at?: string
           user_id: string
           verification_code?: string | null
+          wbc_assumption?: number
+          wbc_count?: number | null
           who_recommendations?: string | null
         }
         Update: {
           ai_findings?: string | null
           confidence_score?: number | null
+          counting_method?: string | null
+          counting_notes?: string | null
+          counting_status?: string | null
           created_at?: string
           detected_regions?: Json | null
           enhanced_image_url?: string | null
           id?: string
           image_quality?: string | null
+          image_quality_score?: number | null
           parasite_count?: number | null
           parasite_density?: string | null
+          parasite_density_per_ul?: number | null
           parasite_species?: string | null
           parasite_stage?: string | null
           quality_issues?: Json | null
@@ -284,6 +303,8 @@ export type Database = {
           updated_at?: string
           user_id?: string
           verification_code?: string | null
+          wbc_assumption?: number
+          wbc_count?: number | null
           who_recommendations?: string | null
         }
         Relationships: []
