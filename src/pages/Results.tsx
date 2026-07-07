@@ -380,11 +380,55 @@ const Results: React.FC = () => {
     });
     y += 84;
 
+    // ----- Parasite Counting Details -----
+    setText(ink);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('PARASITE COUNT DETAILS', M, y);
+    y += 6;
+    setStroke(line);
+    doc.line(M, y, W - M, y);
+    y += 14;
+
+    const countRows: Array<[string, string]> = [
+      ['Parasites Detected', test.parasite_count === null || test.parasite_count === undefined ? 'Unavailable' : String(test.parasite_count)],
+      ['WBCs Counted', test.wbc_count ? String(test.wbc_count) : '—'],
+      ['WBC Assumption Used', `${test.wbc_assumption ?? 8000} WBC/µL`],
+      ['Estimated Parasite Density', test.parasite_density_per_ul != null ? `${test.parasite_density_per_ul.toLocaleString()} parasites/µL` : 'Not calculated'],
+      ['Counting Method', test.counting_method || 'AI-assisted image analysis'],
+      ['Image Quality', `${test.image_quality_score ?? derived.qualityScore}/100 (${(test.image_quality ?? 'n/a').toString().toUpperCase()})`],
+      ['Confidence Score', derived.confidence != null ? `${Math.round(derived.confidence)}%` : '—'],
+      ['Counting Status', (test.counting_status || 'not_completed').replace('_', ' ').toUpperCase()],
+    ];
+    doc.setFontSize(9);
+    countRows.forEach(([k, v], i) => {
+      const ry = y + i * 15;
+      if (i % 2 === 0) {
+        setFill([248, 250, 252]);
+        doc.rect(M, ry - 10, W - M * 2, 15, 'F');
+      }
+      setText(muted);
+      doc.setFont('helvetica', 'normal');
+      doc.text(k, M + 8, ry);
+      setText(ink);
+      doc.setFont('helvetica', 'bold');
+      doc.text(v, W - M - 8, ry, { align: 'right' });
+    });
+    y += countRows.length * 15 + 12;
+    if (test.counting_notes) {
+      setText(muted);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.5);
+      const noteLines = doc.splitTextToSize(test.counting_notes, W - M * 2);
+      doc.text(noteLines, M, y);
+      y += noteLines.length * 11 + 8;
+    }
+
     // ----- Analysis Summary -----
     setText(ink);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('ANALYSIS SUMMARY', M, y);
+    doc.text('INTERPRETATION', M, y);
     y += 6;
     setStroke(line);
     doc.line(M, y, W - M, y);
@@ -726,6 +770,65 @@ const Results: React.FC = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Parasite counting details */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Microscope className="h-4 w-4 text-primary" />
+              Parasite Count Details
+              {test.counting_status && (
+                <Badge
+                  variant={test.counting_status === 'completed' ? 'secondary' : 'outline'}
+                  className="ml-2 capitalize"
+                >
+                  {test.counting_status.replace('_', ' ')}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {test.counting_status === 'not_completed' ? (
+              <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm text-muted-foreground">
+                Parasite count unavailable — {test.counting_notes || 'image quality insufficient for reliable parasite counting.'}
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Parasites Detected</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.parasite_count ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">WBCs Counted</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.wbc_count ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Assumed {test.wbc_assumption ?? 8000} WBC/µL</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Est. Density</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.parasite_density_per_ul != null
+                      ? `${test.parasite_density_per_ul.toLocaleString()}`
+                      : '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">parasites/µL</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Method</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {test.counting_method || 'AI-assisted image analysis'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {test.counting_notes && test.counting_status !== 'not_completed' && (
+              <p className="mt-3 text-xs italic text-muted-foreground">{test.counting_notes}</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Two-column analysis */}
         <div className="grid gap-4 lg:grid-cols-2">

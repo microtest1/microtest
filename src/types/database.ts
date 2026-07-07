@@ -43,6 +43,13 @@ export interface Test {
   image_quality: ImageQuality | null;
   risk_level: RiskLevel | null;
   parasite_count: number | null;
+  wbc_count: number | null;
+  wbc_assumption: number | null;
+  parasite_density_per_ul: number | null;
+  counting_method: string | null;
+  image_quality_score: number | null;
+  counting_status: 'completed' | 'not_completed' | 'inconclusive' | null;
+  counting_notes: string | null;
   detected_regions: DetectedRegion[] | unknown;
   quality_issues: string[] | unknown;
   created_at: string;

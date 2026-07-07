@@ -306,15 +306,17 @@ ${datasetContext}`;
 
 REQUIRED STEPS:
 1. Detect and locate the blood sample region in the image.
-2. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte).
-3. Identify species if possible.
-4. Estimate parasite density AND an approximate parasite_count (integer estimate of distinct parasite candidates visible — 0 if none).
-5. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1, where (0,0) is top-left). Limit to the 10 most confident regions.
-6. Assess image quality and list any quality_issues (e.g. "blurry", "underexposed", "no blood sample").
-7. Provide an overall risk_classification: "low", "medium", or "high".
-8. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
+2. Assess image quality on a 0-100 numeric scale (image_quality_score): brightness, focus/blur, contrast, whether it appears to be a stained microscopy blood-smear at adequate magnification, and whether enough cells are visible for counting. Poor images (<50) should not produce a parasite count.
+3. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte) and produce an integer parasite_count of DISTINCT parasite objects actually visible in the image (0 if none). Do not guess; if the image cannot be analyzed reliably, set parasite_count to null and explain in quality_issues.
+4. Count the number of WHITE BLOOD CELLS clearly visible in the field (wbc_count). If none are visible or cannot be counted, set wbc_count to null.
+5. Identify species if possible.
+6. Provide a qualitative parasite_density band (low/medium/high/critical) only when parasites are detected.
+7. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1). Limit to the 10 most confident regions.
+8. List any quality_issues (e.g. "blurry", "underexposed", "no blood sample", "insufficient cells").
+9. Provide an overall risk_classification: "low", "medium", or "high".
+10. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
 
-This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.` 
+This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
@@ -339,8 +341,10 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
                 parasite_species: { type: "string", description: "Identified Plasmodium species" },
                 parasite_density: { type: "string", enum: ["low", "medium", "high", "critical"] },
                 parasite_stage: { type: "string", description: "Predominant parasite stage" },
-                parasite_count: { type: "integer", description: "Estimated parasite candidate count (0 if none)" },
+                parasite_count: { type: ["integer", "null"], description: "Actual count of distinct parasite objects visible; null if cannot be reliably counted" },
+                wbc_count: { type: ["integer", "null"], description: "Number of white blood cells visible in the field; null if not countable" },
                 image_quality: { type: "string", enum: ["excellent", "good", "fair", "poor"] },
+                image_quality_score: { type: "integer", description: "Numeric quality score 0-100" },
                 quality_issues: {
                   type: "array",
                   items: { type: "string" },
@@ -363,7 +367,7 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
                   }
                 }
               },
-              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "parasite_count", "detected_regions"]
+              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "image_quality_score", "detected_regions"]
             }
           }
         }],
@@ -487,10 +491,57 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
         : (analysis.severity === 'severe' || analysis.severity === 'moderate' ? 'high'
           : analysis.severity === 'mild' ? 'medium' : 'low');
 
-    const parasiteCount = Math.max(0, Math.min(10000, Number(analysis.parasite_count) || 0));
+    const rawParasiteCount = analysis.parasite_count;
+    const parasiteCount: number | null =
+      rawParasiteCount === null || rawParasiteCount === undefined || Number.isNaN(Number(rawParasiteCount))
+        ? null
+        : Math.max(0, Math.min(10000, Math.round(Number(rawParasiteCount))));
+
+    const rawWbcCount = analysis.wbc_count;
+    const wbcCount: number | null =
+      rawWbcCount === null || rawWbcCount === undefined || Number.isNaN(Number(rawWbcCount))
+        ? null
+        : Math.max(0, Math.min(10000, Math.round(Number(rawWbcCount))));
+
+    const WBC_ASSUMPTION = 8000;
+    const imageQualityScore = Math.max(0, Math.min(100,
+      Number.isFinite(Number(analysis.image_quality_score))
+        ? Math.round(Number(analysis.image_quality_score))
+        : (analysis.image_quality === 'excellent' ? 95
+          : analysis.image_quality === 'good' ? 80
+          : analysis.image_quality === 'fair' ? 60
+          : 30)
+    ));
+
+    const qualityAcceptable = imageQualityScore >= 50 && analysis.image_quality !== 'poor';
+
+    let parasiteDensityPerUl: number | null = null;
+    let countingStatus: 'completed' | 'not_completed' | 'inconclusive' = 'not_completed';
+    let countingNotes = '';
+
+    if (!qualityAcceptable) {
+      countingStatus = 'not_completed';
+      countingNotes = 'Image quality insufficient for reliable parasite counting. Please retake with better focus, lighting and microscope alignment.';
+    } else if (parasiteCount === null) {
+      countingStatus = 'inconclusive';
+      countingNotes = 'Parasite counting could not be completed reliably on this image.';
+    } else {
+      countingStatus = 'completed';
+      if (wbcCount && wbcCount > 0) {
+        parasiteDensityPerUl = Math.round((parasiteCount * WBC_ASSUMPTION) / wbcCount);
+        countingNotes = `Density computed using assumed ${WBC_ASSUMPTION} WBC/µL.`;
+      } else {
+        countingNotes = 'Parasite density not calculated — insufficient WBC count data.';
+      }
+    }
 
     resultData.risk_level = riskLevel;
     resultData.parasite_count = parasiteCount;
+    resultData.wbc_count = wbcCount;
+    resultData.parasite_density_per_ul = parasiteDensityPerUl;
+    resultData.image_quality_score = imageQualityScore;
+    resultData.counting_status = countingStatus;
+    resultData.counting_notes = countingNotes;
     resultData.detected_regions = detectedRegions;
     resultData.quality_issues = qualityIssues;
 
@@ -509,8 +560,15 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
         parasite_density: analysis.detected ? (analysis.parasite_density || null) : null,
         parasite_stage: analysis.detected ? (analysis.parasite_stage || null) : null,
         image_quality: analysis.image_quality || null,
+        image_quality_score: imageQualityScore,
         risk_level: riskLevel,
         parasite_count: parasiteCount,
+        wbc_count: wbcCount,
+        wbc_assumption: WBC_ASSUMPTION,
+        parasite_density_per_ul: parasiteDensityPerUl,
+        counting_method: 'AI-assisted image analysis',
+        counting_status: countingStatus,
+        counting_notes: countingNotes,
         detected_regions: detectedRegions,
         quality_issues: qualityIssues,
       })
