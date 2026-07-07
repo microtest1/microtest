@@ -771,6 +771,65 @@ const Results: React.FC = () => {
           </Card>
         )}
 
+        {/* Parasite counting details */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Microscope className="h-4 w-4 text-primary" />
+              Parasite Count Details
+              {test.counting_status && (
+                <Badge
+                  variant={test.counting_status === 'completed' ? 'secondary' : 'outline'}
+                  className="ml-2 capitalize"
+                >
+                  {test.counting_status.replace('_', ' ')}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {test.counting_status === 'not_completed' ? (
+              <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm text-muted-foreground">
+                Parasite count unavailable — {test.counting_notes || 'image quality insufficient for reliable parasite counting.'}
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Parasites Detected</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.parasite_count ?? '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">WBCs Counted</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.wbc_count ?? '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Assumed {test.wbc_assumption ?? 8000} WBC/µL</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Est. Density</p>
+                  <p className="mt-1 font-display text-2xl font-bold text-foreground">
+                    {test.parasite_density_per_ul != null
+                      ? `${test.parasite_density_per_ul.toLocaleString()}`
+                      : '—'}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">parasites/µL</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Method</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {test.counting_method || 'AI-assisted image analysis'}
+                  </p>
+                </div>
+              </div>
+            )}
+            {test.counting_notes && test.counting_status !== 'not_completed' && (
+              <p className="mt-3 text-xs italic text-muted-foreground">{test.counting_notes}</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Two-column analysis */}
         <div className="grid gap-4 lg:grid-cols-2">
           <Card>
