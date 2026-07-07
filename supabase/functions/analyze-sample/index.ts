@@ -341,8 +341,10 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
                 parasite_species: { type: "string", description: "Identified Plasmodium species" },
                 parasite_density: { type: "string", enum: ["low", "medium", "high", "critical"] },
                 parasite_stage: { type: "string", description: "Predominant parasite stage" },
-                parasite_count: { type: "integer", description: "Estimated parasite candidate count (0 if none)" },
+                parasite_count: { type: ["integer", "null"], description: "Actual count of distinct parasite objects visible; null if cannot be reliably counted" },
+                wbc_count: { type: ["integer", "null"], description: "Number of white blood cells visible in the field; null if not countable" },
                 image_quality: { type: "string", enum: ["excellent", "good", "fair", "poor"] },
+                image_quality_score: { type: "integer", description: "Numeric quality score 0-100" },
                 quality_issues: {
                   type: "array",
                   items: { type: "string" },
@@ -365,7 +367,7 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
                   }
                 }
               },
-              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "parasite_count", "detected_regions"]
+              required: ["liquid_detected", "surface_type", "detected", "severity", "risk_classification", "confidence", "findings", "recommendations", "image_quality", "image_quality_score", "detected_regions"]
             }
           }
         }],
