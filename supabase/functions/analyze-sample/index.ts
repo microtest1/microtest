@@ -306,15 +306,17 @@ ${datasetContext}`;
 
 REQUIRED STEPS:
 1. Detect and locate the blood sample region in the image.
-2. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte).
-3. Identify species if possible.
-4. Estimate parasite density AND an approximate parasite_count (integer estimate of distinct parasite candidates visible — 0 if none).
-5. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1, where (0,0) is top-left). Limit to the 10 most confident regions.
-6. Assess image quality and list any quality_issues (e.g. "blurry", "underexposed", "no blood sample").
-7. Provide an overall risk_classification: "low", "medium", or "high".
-8. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
+2. Assess image quality on a 0-100 numeric scale (image_quality_score): brightness, focus/blur, contrast, whether it appears to be a stained microscopy blood-smear at adequate magnification, and whether enough cells are visible for counting. Poor images (<50) should not produce a parasite count.
+3. Identify Plasmodium parasites at any life stage (ring, trophozoite, schizont, gametocyte) and produce an integer parasite_count of DISTINCT parasite objects actually visible in the image (0 if none). Do not guess; if the image cannot be analyzed reliably, set parasite_count to null and explain in quality_issues.
+4. Count the number of WHITE BLOOD CELLS clearly visible in the field (wbc_count). If none are visible or cannot be counted, set wbc_count to null.
+5. Identify species if possible.
+6. Provide a qualitative parasite_density band (low/medium/high/critical) only when parasites are detected.
+7. For EACH parasite candidate identified, report a bounding box in detected_regions using NORMALIZED coordinates (x, y, width, height each between 0 and 1). Limit to the 10 most confident regions.
+8. List any quality_issues (e.g. "blurry", "underexposed", "no blood sample", "insufficient cells").
+9. Provide an overall risk_classification: "low", "medium", or "high".
+10. Provide WHO-aligned recommendations. Never prescribe; always recommend laboratory confirmation.
 
-This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.` 
+This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
               },
               { type: "image_url", image_url: { url: imageData } }
             ]
