@@ -491,10 +491,57 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
         : (analysis.severity === 'severe' || analysis.severity === 'moderate' ? 'high'
           : analysis.severity === 'mild' ? 'medium' : 'low');
 
-    const parasiteCount = Math.max(0, Math.min(10000, Number(analysis.parasite_count) || 0));
+    const rawParasiteCount = analysis.parasite_count;
+    const parasiteCount: number | null =
+      rawParasiteCount === null || rawParasiteCount === undefined || Number.isNaN(Number(rawParasiteCount))
+        ? null
+        : Math.max(0, Math.min(10000, Math.round(Number(rawParasiteCount))));
+
+    const rawWbcCount = analysis.wbc_count;
+    const wbcCount: number | null =
+      rawWbcCount === null || rawWbcCount === undefined || Number.isNaN(Number(rawWbcCount))
+        ? null
+        : Math.max(0, Math.min(10000, Math.round(Number(rawWbcCount))));
+
+    const WBC_ASSUMPTION = 8000;
+    const imageQualityScore = Math.max(0, Math.min(100,
+      Number.isFinite(Number(analysis.image_quality_score))
+        ? Math.round(Number(analysis.image_quality_score))
+        : (analysis.image_quality === 'excellent' ? 95
+          : analysis.image_quality === 'good' ? 80
+          : analysis.image_quality === 'fair' ? 60
+          : 30)
+    ));
+
+    const qualityAcceptable = imageQualityScore >= 50 && analysis.image_quality !== 'poor';
+
+    let parasiteDensityPerUl: number | null = null;
+    let countingStatus: 'completed' | 'not_completed' | 'inconclusive' = 'not_completed';
+    let countingNotes = '';
+
+    if (!qualityAcceptable) {
+      countingStatus = 'not_completed';
+      countingNotes = 'Image quality insufficient for reliable parasite counting. Please retake with better focus, lighting and microscope alignment.';
+    } else if (parasiteCount === null) {
+      countingStatus = 'inconclusive';
+      countingNotes = 'Parasite counting could not be completed reliably on this image.';
+    } else {
+      countingStatus = 'completed';
+      if (wbcCount && wbcCount > 0) {
+        parasiteDensityPerUl = Math.round((parasiteCount * WBC_ASSUMPTION) / wbcCount);
+        countingNotes = `Density computed using assumed ${WBC_ASSUMPTION} WBC/µL.`;
+      } else {
+        countingNotes = 'Parasite density not calculated — insufficient WBC count data.';
+      }
+    }
 
     resultData.risk_level = riskLevel;
     resultData.parasite_count = parasiteCount;
+    resultData.wbc_count = wbcCount;
+    resultData.parasite_density_per_ul = parasiteDensityPerUl;
+    resultData.image_quality_score = imageQualityScore;
+    resultData.counting_status = countingStatus;
+    resultData.counting_notes = countingNotes;
     resultData.detected_regions = detectedRegions;
     resultData.quality_issues = qualityIssues;
 
@@ -513,8 +560,15 @@ This is a SCREENING tool. Results MUST be confirmed by laboratory microscopy.`
         parasite_density: analysis.detected ? (analysis.parasite_density || null) : null,
         parasite_stage: analysis.detected ? (analysis.parasite_stage || null) : null,
         image_quality: analysis.image_quality || null,
+        image_quality_score: imageQualityScore,
         risk_level: riskLevel,
         parasite_count: parasiteCount,
+        wbc_count: wbcCount,
+        wbc_assumption: WBC_ASSUMPTION,
+        parasite_density_per_ul: parasiteDensityPerUl,
+        counting_method: 'AI-assisted image analysis',
+        counting_status: countingStatus,
+        counting_notes: countingNotes,
         detected_regions: detectedRegions,
         quality_issues: qualityIssues,
       })
