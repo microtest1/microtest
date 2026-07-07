@@ -380,11 +380,55 @@ const Results: React.FC = () => {
     });
     y += 84;
 
+    // ----- Parasite Counting Details -----
+    setText(ink);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('PARASITE COUNT DETAILS', M, y);
+    y += 6;
+    setStroke(line);
+    doc.line(M, y, W - M, y);
+    y += 14;
+
+    const countRows: Array<[string, string]> = [
+      ['Parasites Detected', test.parasite_count === null || test.parasite_count === undefined ? 'Unavailable' : String(test.parasite_count)],
+      ['WBCs Counted', test.wbc_count ? String(test.wbc_count) : '—'],
+      ['WBC Assumption Used', `${test.wbc_assumption ?? 8000} WBC/µL`],
+      ['Estimated Parasite Density', test.parasite_density_per_ul != null ? `${test.parasite_density_per_ul.toLocaleString()} parasites/µL` : 'Not calculated'],
+      ['Counting Method', test.counting_method || 'AI-assisted image analysis'],
+      ['Image Quality', `${test.image_quality_score ?? derived.qualityScore}/100 (${(test.image_quality ?? 'n/a').toString().toUpperCase()})`],
+      ['Confidence Score', derived.confidence != null ? `${Math.round(derived.confidence)}%` : '—'],
+      ['Counting Status', (test.counting_status || 'not_completed').replace('_', ' ').toUpperCase()],
+    ];
+    doc.setFontSize(9);
+    countRows.forEach(([k, v], i) => {
+      const ry = y + i * 15;
+      if (i % 2 === 0) {
+        setFill([248, 250, 252]);
+        doc.rect(M, ry - 10, W - M * 2, 15, 'F');
+      }
+      setText(muted);
+      doc.setFont('helvetica', 'normal');
+      doc.text(k, M + 8, ry);
+      setText(ink);
+      doc.setFont('helvetica', 'bold');
+      doc.text(v, W - M - 8, ry, { align: 'right' });
+    });
+    y += countRows.length * 15 + 12;
+    if (test.counting_notes) {
+      setText(muted);
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8.5);
+      const noteLines = doc.splitTextToSize(test.counting_notes, W - M * 2);
+      doc.text(noteLines, M, y);
+      y += noteLines.length * 11 + 8;
+    }
+
     // ----- Analysis Summary -----
     setText(ink);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.text('ANALYSIS SUMMARY', M, y);
+    doc.text('INTERPRETATION', M, y);
     y += 6;
     setStroke(line);
     doc.line(M, y, W - M, y);
