@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /scanner
+Disallow: /history
+Disallow: /settings
+Disallow: /results
+Disallow: /datasets
+Disallow: /subscription
+Disallow: /auth
+
+Sitemap: https://www.micro-test.online/sitemap.xml
